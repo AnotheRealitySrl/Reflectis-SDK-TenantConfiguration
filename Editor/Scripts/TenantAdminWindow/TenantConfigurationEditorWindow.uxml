@@ -1,0 +1,6 @@
+<engine:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Packages/com.anotherealitysrl.reflectis-sdk-tenantconfiguration/Editor/Scripts/TenantAdminWindow/TenantConfigurationEditorWindow.uss?fileID=7433441132597879392&amp;guid=2709685676303ee4182e7619466c1e03&amp;type=3#TenantConfigurationEditorWindow" />
+    <engine:Label text="Selected tenant info" name="Title" />
+    <engine:VisualElement name="PropertiesContainer" style="flex-grow: 1;" />
+    <engine:Button text="Update tenant configuration" name="UpdateTenantConfigurationButton" />
+</engine:UXML>

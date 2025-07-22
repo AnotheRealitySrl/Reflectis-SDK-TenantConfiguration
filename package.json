@@ -1,0 +1,15 @@
+{
+  "name": "com.anotherealitysrl.reflectis-sdk-tenantconfiguration",
+  "displayName": "Reflectis-SDK-TenantConfiguration",
+  "version": "1.0.0",
+  "unity": "2020.1",
+  "description": "Reflectis Tenant Configuration module",
+  "keywords": [
+    "unity"
+  ],
+  "category": "Unity",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AnotheRealitySrl/Reflectis-SDK-TenantConfiguration.git"
+  }
+}

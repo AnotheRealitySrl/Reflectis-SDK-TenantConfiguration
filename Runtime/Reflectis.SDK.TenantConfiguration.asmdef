@@ -1,0 +1,17 @@
+{
+    "name": "Reflectis.SDK.TenantConfiguration",
+    "rootNamespace": "Reflectis.SDK.TenantConfiguration",
+    "references": [
+        "GUID:ab59f74e483e1ee4595bfefea56493f2",
+        "GUID:8fe0a1c5c994e004dbeb7b42668c6628"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
