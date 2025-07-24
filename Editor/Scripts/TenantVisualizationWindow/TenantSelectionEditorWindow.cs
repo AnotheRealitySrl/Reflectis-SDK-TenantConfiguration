@@ -151,7 +151,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             Button buildButton = buttonsContainer.Q<Button>("BuildButton");
             buildButton.clicked += () =>
             {
-                tenantVisualizationSettings.ConfigurationScript.ConfigureApp(tenantVisualizationSettings.SelectedConfig);
+                tenantVisualizationSettings.BuildScript.Build();
             };
 
             Button configureTenantButton = buttonsContainer.Q<Button>("ConfigureTenantButton");

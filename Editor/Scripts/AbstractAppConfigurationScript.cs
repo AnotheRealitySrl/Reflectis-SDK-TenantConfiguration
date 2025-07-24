@@ -1,13 +1,14 @@
+using System.Threading.Tasks;
+
 using UnityEngine;
 
 namespace Reflectis.SDK.TenantConfiguration.Editor
 {
-    [CreateAssetMenu(fileName = "AppConfigurationScriptBase", menuName = "Reflectis/SDK/Tenant Configuration/AppConfigurationScriptBase")]
     public abstract class AbstractAppConfigurationScript : ScriptableObject
     {
-        [SerializeField] private TenantConfigurationSystem tenantConfigurationSystem;
+        [SerializeField] protected TenantConfigurationSystem tenantConfigurationSystem;
 
-        public abstract void ConfigureApp(AppConfig device);
+        public abstract Task ConfigureApp(AppConfig device);
     }
 }
 

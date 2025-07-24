@@ -4,6 +4,8 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
 {
     public abstract class AbstractBuildScript : ScriptableObject
     {
-        public abstract void Build();
+        [SerializeField] protected TenantConfigurationSystem tenantConfigurationSystem;
+
+        public abstract void Build(params object[] buildParams);
     }
 }

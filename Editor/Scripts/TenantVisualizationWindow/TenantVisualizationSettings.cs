@@ -11,8 +11,8 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
     [CreateAssetMenu(fileName = "TenantVisualizationSettings", menuName = "Reflectis/SDK/Tenant Configuration/TenantVisualizationSettings")]
     public class TenantVisualizationSettings : ScriptableObject
     {
-        [SerializeField] private List<TextAsset> tenantAssets = new List<TextAsset>();
-        [SerializeField] private List<TextAsset> adminTenantAssets = new List<TextAsset>();
+        [SerializeField] private List<TextAsset> tenantAssets = new();
+        [SerializeField] private List<TextAsset> adminTenantAssets = new();
 
         [SerializeField] private AbstractAppConfigurationScript configurationScript;
         [SerializeField] private AbstractBuildScript buildScript;

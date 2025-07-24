@@ -20,17 +20,13 @@ namespace Reflectis.SDK.TenantConfiguration
         #region Inspector variables
 
         [Header("Tenant configuration")]
-        [SerializeField] private string tenantConfigurationApiUrl;
-        [SerializeField] private string tenantConfigurationApiVersion;
-        [SerializeField] private string tenantConfigurationApiEnvironment;
         [SerializeField] private string appId;
         [SerializeField] private string appSecret;
+        [SerializeField] private string tenantConfigurationApiUrl;
+        [SerializeField] private string tenantConfigurationApiVersion;
 
         [Header("API settings")]
         [SerializeField] private bool allowUntrustedServers;
-
-        [Header("Utilities")]
-        [SerializeField] private bool getTenantDataOnInit = true;
 
         #endregion
 
@@ -51,7 +47,6 @@ namespace Reflectis.SDK.TenantConfiguration
 
         public string TenantConfigurationApiUrl { get => tenantConfigurationApiUrl; set => tenantConfigurationApiUrl = value; }
         public string TenantConfigurationApiVersion { get => tenantConfigurationApiVersion; set => tenantConfigurationApiVersion = value; }
-        public string TenantConfigurationApiEnvironment { get => tenantConfigurationApiEnvironment; set => tenantConfigurationApiEnvironment = value; }
         public string AppId { get => appId; set => appId = value; }
         public string AppSecret { get => appSecret; set => appSecret = value; }
 
@@ -92,20 +87,6 @@ namespace Reflectis.SDK.TenantConfiguration
 
             this.appId = appId.ToString();
 
-            if (getTenantDataOnInit)
-            {
-                await Setup();
-            }
-
-            await base.Init();
-        }
-
-        #endregion
-
-        #region Public methods
-
-        public async Task Setup()
-        {
             if (await IsAlive())
             {
                 ApiResponse<Tenant> tenantDataReq = await GetTenantData();
@@ -114,6 +95,8 @@ namespace Reflectis.SDK.TenantConfiguration
                     TenantConfiguration = tenantDataReq.Content;
                 }
             }
+
+            await base.Init();
         }
 
         #endregion

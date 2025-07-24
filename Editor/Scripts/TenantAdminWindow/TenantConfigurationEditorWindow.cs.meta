@@ -7,7 +7,11 @@ MonoImporter:
   - m_ViewDataDictionary: {instanceID: 0}
   - m_VisualTreeAsset: {fileID: 9197481963319205126, guid: b76fc13051cc3554980522f27bb529ca,
       type: 3}
-  - configurationItemVisualTreeAsset: {fileID: 9197481963319205126, guid: c9ac492aa3e640e4896f87bfee705eb2,
+  - configurationItemTextField: {fileID: 9197481963319205126, guid: 8595fbc9957e0794693c99b861fc28cd,
+      type: 3}
+  - configurationItemNumericField: {fileID: 9197481963319205126, guid: 8d8d0712775b34f418db59664f5e32dc,
+      type: 3}
+  - configurationItemCheckBox: {fileID: 9197481963319205126, guid: c9ac492aa3e640e4896f87bfee705eb2,
       type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
