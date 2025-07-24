@@ -28,11 +28,11 @@ namespace Reflectis.SDK.TenantConfiguration
         [Header("API settings")]
         [SerializeField] private bool allowUntrustedServers;
 
+        [SerializeField] private HttpSystem httpSystem;
+
         #endregion
 
         #region Private variables
-
-        private HttpSystem httpSystem;
 
         public Uri apiBaseUrl;
         private string version;

@@ -11,7 +11,7 @@ using UnityEngine.UIElements;
 
 namespace Reflectis.SDK.TenantConfiguration.Editor
 {
-    public class TenantSelectionEditorWindow : EditorWindow
+    public class TenantSelectionWindow : EditorWindow
     {
         [SerializeField] private VisualTreeAsset m_VisualTreeAsset = default;
         [SerializeField] private VisualTreeAsset tenantVisualTree = default;
@@ -20,16 +20,16 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
 
         [SerializeField] private TenantConfigurationSystem tenantConfigurationSystem = default;
 
-        private TenantVisualizationSettings tenantVisualizationSettings;
+        private TenantConfigurationSettings tenantVisualizationSettings;
 
         private const string settings_folder_path = "Assets/Editor/TenantConfiguration";
         private const string settings_configuration_path = "TenantConfigurationSettings.asset";
 
 
-        [MenuItem("Reflectis/SDK/Tenant Configuration/Show available tenants")]
+        [MenuItem("Reflectis/SDK/TenantConfiguration/Show available tenants")]
         public static void ShowExample()
         {
-            TenantSelectionEditorWindow wnd = GetWindow<TenantSelectionEditorWindow>();
+            TenantSelectionWindow wnd = GetWindow<TenantSelectionWindow>();
             wnd.titleContent = new GUIContent("Show available tenants");
         }
 
@@ -42,14 +42,14 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             VisualElement labelFromUXML = m_VisualTreeAsset.Instantiate();
             root.Add(labelFromUXML);
 
-            string tenantVisualizationSettingsAssetGuid = AssetDatabase.FindAssets("t:" + typeof(TenantVisualizationSettings).Name).ToList().FirstOrDefault();
-            tenantVisualizationSettings = AssetDatabase.LoadAssetAtPath<TenantVisualizationSettings>(AssetDatabase.GUIDToAssetPath(tenantVisualizationSettingsAssetGuid));
+            string tenantVisualizationSettingsAssetGuid = AssetDatabase.FindAssets("t:" + typeof(TenantConfigurationSettings).Name).ToList().FirstOrDefault();
+            tenantVisualizationSettings = AssetDatabase.LoadAssetAtPath<TenantConfigurationSettings>(AssetDatabase.GUIDToAssetPath(tenantVisualizationSettingsAssetGuid));
 
             if (tenantVisualizationSettings == null)
             {
                 EnsureFolderExists(settings_folder_path);
 
-                tenantVisualizationSettings = CreateInstance<TenantVisualizationSettings>();
+                tenantVisualizationSettings = CreateInstance<TenantConfigurationSettings>();
                 string settingsAssetPath = $"{settings_folder_path}/{settings_configuration_path}";
                 AssetDatabase.CreateAsset(tenantVisualizationSettings, settingsAssetPath);
                 AssetDatabase.SaveAssets();
@@ -58,7 +58,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
 
             if (!tenantVisualizationSettings)
             {
-                tenantVisualizationSettings = CreateInstance<TenantVisualizationSettings>();
+                tenantVisualizationSettings = CreateInstance<TenantConfigurationSettings>();
                 AssetDatabase.CreateAsset(tenantVisualizationSettings, "Assets/TenantVisualizationSettings.asset");
             }
 
@@ -142,23 +142,44 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
 
             VisualElement buttonsContainer = root.Q<VisualElement>("ButtonsContainer");
 
+            buttonsContainer.dataSource = tenantVisualizationSettings;
             Button configureAppButton = buttonsContainer.Q<Button>("ConfigureAppButton");
+            DataBinding configureAppButtonBinding = new()
+            {
+                dataSourcePath = PropertyPath.FromName(nameof(TenantConfigurationSettings.ConfigurationScript)),
+                bindingMode = BindingMode.ToTarget
+            };
+            configureAppButtonBinding.sourceToUiConverters.AddConverter((ref AbstractAppConfigurator value) => value != null);
+            configureAppButton.SetBinding(nameof(Button.enabledSelf), configureAppButtonBinding);
             configureAppButton.clicked += () =>
             {
                 tenantVisualizationSettings.ConfigurationScript.ConfigureApp(tenantVisualizationSettings.SelectedConfig);
             };
 
             Button buildButton = buttonsContainer.Q<Button>("BuildButton");
+            DataBinding buildButtonBinding = new()
+            {
+                dataSourcePath = PropertyPath.FromName(nameof(TenantConfigurationSettings.BuildScript)),
+                bindingMode = BindingMode.ToTarget
+            };
+            buildButtonBinding.sourceToUiConverters.AddConverter((ref BuildScriptBase value) => value != null);
+            buildButton.SetBinding(nameof(Button.enabledSelf), buildButtonBinding);
             buildButton.clicked += () =>
             {
-                tenantVisualizationSettings.BuildScript.Build();
+                tenantVisualizationSettings.BuildScript.Build(tenantVisualizationSettings.SelectedEnv, tenantVisualizationSettings.SelectedConfig);
             };
 
             Button configureTenantButton = buttonsContainer.Q<Button>("ConfigureTenantButton");
+            DataBinding configureTenantButtonBinding = new()
+            {
+                dataSourcePath = PropertyPath.FromName(nameof(TenantConfigurationSettings.DoesAdminConfigurationExist)),
+                bindingMode = BindingMode.ToTarget
+            };
+            configureTenantButton.SetBinding(nameof(Button.enabledSelf), configureTenantButtonBinding);
             configureTenantButton.clicked += () =>
             {
-                TenantConfigurationEditorWindow.ShowWindow();
-                GetWindow<TenantConfigurationEditorWindow>().ShowTenantConfigurationWindow(tenantVisualizationSettings.SelectedConfig);
+                TenantConfigurationWindow.ShowWindow();
+                GetWindow<TenantConfigurationWindow>().ShowTenantConfigurationWindow(tenantVisualizationSettings.GetTenantConfigurations(tenantVisualizationSettings.AdminTenantAssets).FirstOrDefault(x => x.Item1 == tenantVisualizationSettings.SelectedTenant).Item2[tenantVisualizationSettings.SelectedEnv]);
             };
         }
 

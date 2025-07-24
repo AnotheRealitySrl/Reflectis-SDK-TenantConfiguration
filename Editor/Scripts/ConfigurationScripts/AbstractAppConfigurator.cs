@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Reflectis.SDK.TenantConfiguration.Editor
 {
-    public abstract class AbstractAppConfigurationScript : ScriptableObject
+    public abstract class AbstractAppConfigurator : ScriptableObject
     {
         [SerializeField] protected TenantConfigurationSystem tenantConfigurationSystem;
 

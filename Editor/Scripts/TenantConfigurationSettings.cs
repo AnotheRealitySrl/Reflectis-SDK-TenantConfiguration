@@ -8,14 +8,14 @@ using UnityEngine;
 
 namespace Reflectis.SDK.TenantConfiguration.Editor
 {
-    [CreateAssetMenu(fileName = "TenantVisualizationSettings", menuName = "Reflectis/SDK/Tenant Configuration/TenantVisualizationSettings")]
-    public class TenantVisualizationSettings : ScriptableObject
+    [CreateAssetMenu(fileName = "TenantConfigurationSettings", menuName = "Reflectis/SDK-TenantConfiguration/TenantConfigurationSettings")]
+    public class TenantConfigurationSettings : ScriptableObject
     {
         [SerializeField] private List<TextAsset> tenantAssets = new();
         [SerializeField] private List<TextAsset> adminTenantAssets = new();
 
-        [SerializeField] private AbstractAppConfigurationScript configurationScript;
-        [SerializeField] private AbstractBuildScript buildScript;
+        [SerializeField] private AbstractAppConfigurator configurationScript;
+        [SerializeField] private BuildScriptBase buildScript;
 
         public List<TextAsset> TenantAssets => tenantAssets;
         public List<TextAsset> AdminTenantAssets => adminTenantAssets;
@@ -23,9 +23,10 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
         [CreateProperty] public string SelectedTenant { get; set; }
         [CreateProperty] public string SelectedEnv { get; set; }
         [CreateProperty] public AppConfig SelectedConfig { get; set; } = new();
+        [CreateProperty] public bool DoesAdminConfigurationExist => GetTenantConfigurations(adminTenantAssets).Exists(x => x.Item1 == SelectedTenant && x.Item2.ContainsKey(SelectedEnv));
 
-        public AbstractAppConfigurationScript ConfigurationScript { get => configurationScript; set => configurationScript = value; }
-        public AbstractBuildScript BuildScript { get => buildScript; set => buildScript = value; }
+        [CreateProperty] public AbstractAppConfigurator ConfigurationScript { get => configurationScript; set => configurationScript = value; }
+        [CreateProperty] public BuildScriptBase BuildScript { get => buildScript; set => buildScript = value; }
 
 
         public List<(string, Dictionary<string, AppConfig>)> GetTenantConfigurations(List<TextAsset> configurationAssets)

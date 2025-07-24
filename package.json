@@ -11,5 +11,12 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/AnotheRealitySrl/Reflectis-SDK-TenantConfiguration.git"
-  }
+  },
+  "samples": [
+    {
+      "displayName": "App Configuration Sample",
+      "description": "This scriptable object allows you to configure the Reflectis app according to the selected tenant.",
+      "path": "Samples~/AppConfiguratorBase"
+    }
+  ]
 }
