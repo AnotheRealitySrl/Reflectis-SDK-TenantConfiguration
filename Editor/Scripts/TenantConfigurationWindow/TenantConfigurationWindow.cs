@@ -1,5 +1,7 @@
 using Newtonsoft.Json;
 
+using Reflectis.SDK.Core.ApiSystem;
+
 using System;
 using System.Collections.Generic;
 
@@ -65,12 +67,8 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             HttpSystem httpSystem = CreateInstance<HttpSystem>();
             TenantConfigurationSystem tenantConfigurationSystemAdmin = CreateInstance<TenantConfigurationSystem>();
 
-            tenantConfigurationSystemAdmin.AppId = app.AppId;
-            tenantConfigurationSystemAdmin.AppSecret = app.AppSecret;
-            tenantConfigurationSystemAdmin.TenantConfigurationApiUrl = app.TenantConfigurationApiUrl;
-            tenantConfigurationSystemAdmin.TenantConfigurationApiVersion = app.TenantConfigurationApiVersion;
-            tenantConfigurationSystemAdmin.HttpSystem = httpSystem;
-            _ = tenantConfigurationSystemAdmin.Init();
+            AppConfig appConfig = new(app.AppId, app.AppSecret, app.ApiBaseUrl, app.ApiVersion);
+            _ = tenantConfigurationSystemAdmin.Init(appConfig, httpSystem);
 
             container = root.Q<VisualElement>("PropertiesContainer");
             Tenant tenant = (await tenantConfigurationSystemAdmin.GetTenantData()).Content;

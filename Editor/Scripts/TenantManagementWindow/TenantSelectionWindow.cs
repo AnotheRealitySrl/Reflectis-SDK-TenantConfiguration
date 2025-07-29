@@ -1,3 +1,5 @@
+using Reflectis.SDK.Core.ApiSystem;
+
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -128,14 +130,14 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             Label tenantConfigurationUrlLabel = selectedTenantConfigSection.Q<Label>("TenantConfigurationUrl");
             tenantConfigurationUrlLabel.SetBinding(nameof(tenantConfigurationUrlLabel.text), new DataBinding()
             {
-                dataSourcePath = PropertyPath.FromName(nameof(AppConfig.TenantConfigurationApiUrl)),
+                dataSourcePath = PropertyPath.FromName(nameof(AppConfig.ApiBaseUrl)),
                 bindingMode = BindingMode.ToTarget
             });
 
             Label tenantConfigurationVersionLabel = selectedTenantConfigSection.Q<Label>("TenantConfigurationVersion");
             tenantConfigurationVersionLabel.SetBinding(nameof(tenantConfigurationVersionLabel.text), new DataBinding()
             {
-                dataSourcePath = PropertyPath.FromName(nameof(AppConfig.TenantConfigurationApiVersion)),
+                dataSourcePath = PropertyPath.FromName(nameof(AppConfig.ApiVersion)),
                 bindingMode = BindingMode.ToTarget
             });
 
