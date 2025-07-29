@@ -68,7 +68,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             TenantConfigurationSystem tenantConfigurationSystemAdmin = CreateInstance<TenantConfigurationSystem>();
 
             AppConfig appConfig = new(app.AppId, app.AppSecret, app.ApiBaseUrl, app.ApiVersion);
-            _ = tenantConfigurationSystemAdmin.Init(appConfig, httpSystem);
+            tenantConfigurationSystemAdmin.Init(appConfig, httpSystem);
 
             container = root.Q<VisualElement>("PropertiesContainer");
             Tenant tenant = (await tenantConfigurationSystemAdmin.GetTenantData()).Content;

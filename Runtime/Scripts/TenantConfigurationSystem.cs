@@ -32,22 +32,22 @@ namespace Reflectis.SDK.TenantConfiguration
 
         #region System implementation
 
-        public override async Task Init(params object[] data)
+        public override async Task Init()
         {
-            await base.Init(data);
-
-            if (data[1] is HttpSystem httpSystem)
-            {
-                this.httpSystem = httpSystem;
-            }
+            await base.Init();
 
             ApiResponse<Tenant> tenantDataReq = await GetTenantData();
             if (tenantDataReq.IsSuccess)
             {
                 TenantConfiguration = tenantDataReq.Content;
             }
+        }
 
-            await base.Init();
+        public async Task Init(AppConfig config, HttpSystem httpSystem)
+        {
+            this.httpSystem = httpSystem;
+
+            await Init(config);
         }
 
         #endregion
