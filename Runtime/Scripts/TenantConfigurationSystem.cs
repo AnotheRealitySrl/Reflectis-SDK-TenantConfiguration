@@ -15,12 +15,7 @@ namespace Reflectis.SDK.TenantConfiguration
     [CreateAssetMenu(menuName = "AnotheReality/Systems/TenantConfigurationSystem", fileName = "TenantConfigurationSystem")]
     public class TenantConfigurationSystem : ApiSystemBase
     {
-        #region Inspector variables
-
-        [Header("API settings")]
-        [SerializeField] private bool allowUntrustedServers;
-
-        #endregion
+        [SerializeField] private bool getTenantDataOnInit = true;
 
         #region Properties
 
@@ -36,10 +31,17 @@ namespace Reflectis.SDK.TenantConfiguration
         {
             await base.Init();
 
-            ApiResponse<Tenant> tenantDataReq = await GetTenantData();
-            if (tenantDataReq.IsSuccess)
+            if (getTenantDataOnInit)
             {
-                TenantConfiguration = tenantDataReq.Content;
+                ApiResponse<Tenant> tenantDataReq = await GetTenantData();
+                if (tenantDataReq.IsSuccess)
+                {
+                    TenantConfiguration = tenantDataReq.Content;
+                }
+                else
+                {
+                    Debug.LogError($"[{name}]: Failed to get tenant data: {tenantDataReq.ReasonPhrase}");
+                }
             }
         }
 
@@ -68,18 +70,7 @@ namespace Reflectis.SDK.TenantConfiguration
             using UnityWebRequest request = await BuildRequest(UnityWebRequest.kHttpVerbGET, "manage/apps/tenant", authentication: EAuthentication.Hmac);
             await request.SendWebRequest();
 
-            ApiResponse<Tenant> tenantDataRes = new(request.responseCode, request.error, request.downloadHandler.text);
-
-            if (tenantDataRes.IsSuccess)
-            {
-                TenantConfiguration = tenantDataRes.Content;
-            }
-            else
-            {
-                Debug.LogError($"Error retrieving tenant configuration: {tenantDataRes.StatusCode} {tenantDataRes.ReasonPhrase}");
-            }
-
-            return tenantDataRes;
+            return new(request.responseCode, request.error, request.downloadHandler.text);
         }
 
         public async Task<ApiResponse<TenantConfig>> UpdateTenantConfig(int id, string config)
