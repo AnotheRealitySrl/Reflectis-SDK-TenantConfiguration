@@ -1,4 +1,5 @@
 using Reflectis.SDK.Core.ApiSystem;
+using Reflectis.SDK.Core.Utilities;
 
 using System.Collections.Generic;
 
@@ -25,15 +26,15 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
         [CreateProperty] public string SelectedTenant { get; set; }
         [CreateProperty] public string SelectedEnv { get; set; }
         [CreateProperty] public AppConfig SelectedConfig { get; set; } = new();
-        [CreateProperty] public bool DoesAdminConfigurationExist => GetTenantConfigurations(adminTenantAssets).Exists(x => x.Item1 == SelectedTenant && x.Item2.ContainsKey(SelectedEnv));
+        [CreateProperty] public bool DoesAdminConfigurationExist => GetCredentials(adminTenantAssets).Exists(x => x.Item1 == SelectedTenant && x.Item2.ContainsKey(SelectedEnv));
 
         [CreateProperty] public AbstractAppConfigurator ConfigurationScript { get => configurationScript; set => configurationScript = value; }
         [CreateProperty] public BuildScriptBase BuildScript { get => buildScript; set => buildScript = value; }
 
 
-        public List<(string, Dictionary<string, AppConfig>)> GetTenantConfigurations(List<TextAsset> configurationAssets)
+        public List<(string, Dictionary<string, AppConfig>)> GetApiConfigs(List<TextAsset> configurationAssets)
         {
-            List<(string, Dictionary<string, AppConfig>)> tenantConfigurations = new();
+            List<(string, Dictionary<string, AppConfig>)> apiConfigs = new();
             foreach (var config in configurationAssets)
             {
                 if (config == null)
@@ -49,9 +50,32 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                         mergedConfigs[kvp.Key] = kvp.Value;
                     }
                 }
-                tenantConfigurations.Add((configName, mergedConfigs));
+                apiConfigs.Add((configName, mergedConfigs));
             }
-            return tenantConfigurations;
+            return apiConfigs;
+        }
+
+        public List<(string, Dictionary<string, HmacCredential>)> GetCredentials(List<TextAsset> configurationAssets)
+        {
+            List<(string, Dictionary<string, HmacCredential>)> credentials = new();
+            foreach (var config in configurationAssets)
+            {
+                if (config == null)
+                    continue;
+
+                Dictionary<string, HmacCredential> mergedConfigs = new();
+                string configName = AssetDatabase.GetAssetPath(config).Split("/")[^1].Split(".")[0];
+                var configDict = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, HmacCredential>>(config.text);
+                if (configDict != null)
+                {
+                    foreach (var kvp in configDict)
+                    {
+                        mergedConfigs[kvp.Key] = kvp.Value;
+                    }
+                }
+                credentials.Add((configName, mergedConfigs));
+            }
+            return credentials;
         }
     }
 }

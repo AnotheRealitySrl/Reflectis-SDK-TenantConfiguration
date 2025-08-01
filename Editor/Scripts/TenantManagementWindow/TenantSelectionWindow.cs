@@ -1,4 +1,5 @@
 using Reflectis.SDK.Core.ApiSystem;
+using Reflectis.SDK.Core.Utilities;
 
 using System.Collections.Generic;
 using System.IO;
@@ -69,7 +70,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
 
             ScrollView scrollView = root.Q<ScrollView>();
             List<Toggle> toggles = new();
-            foreach (var tenant in tenantVisualizationSettings.GetTenantConfigurations(tenantVisualizationSettings.TenantAssets))
+            foreach (var tenant in tenantVisualizationSettings.GetApiConfigs(tenantVisualizationSettings.TenantAssets))
             {
                 VisualElement tenantElement = tenantVisualTree.Instantiate();
                 tenantElement.Q<Label>().text = tenant.Item1;
@@ -116,14 +117,14 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             Label appIdLabel = selectedTenantConfigSection.Q<VisualElement>("AppId").Q<Label>("Value");
             appIdLabel.SetBinding(nameof(appIdLabel.text), new DataBinding()
             {
-                dataSourcePath = PropertyPath.FromName(nameof(AppConfig.AppId)),
+                dataSourcePath = new PropertyPath($"{nameof(AppConfig.Credential)}.{nameof(HmacCredential.AppId)}"),
                 bindingMode = BindingMode.ToTarget
             });
 
             Label appSecretLabel = selectedTenantConfigSection.Q<VisualElement>("AppSecret").Q<Label>("Value");
             appSecretLabel.SetBinding(nameof(appSecretLabel.text), new DataBinding()
             {
-                dataSourcePath = PropertyPath.FromName(nameof(AppConfig.AppSecret)),
+                dataSourcePath = new PropertyPath($"{nameof(AppConfig.Credential)}.{nameof(HmacCredential.AppId)}"),
                 bindingMode = BindingMode.ToTarget
             });
 
@@ -181,8 +182,8 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             configureTenantButton.clicked += () =>
             {
                 TenantConfigurationWindow.ShowWindow();
-                AppConfig partialConfig = tenantVisualizationSettings.GetTenantConfigurations(tenantVisualizationSettings.AdminTenantAssets).FirstOrDefault(x => x.Item1 == tenantVisualizationSettings.SelectedTenant).Item2[tenantVisualizationSettings.SelectedEnv];
-                AppConfig adminConfig = new(partialConfig.AppId, partialConfig.AppSecret, tenantVisualizationSettings.SelectedConfig.ApiBaseUrl, tenantVisualizationSettings.SelectedConfig.ApiVersion);
+                HmacCredential credential = tenantVisualizationSettings.GetCredentials(tenantVisualizationSettings.AdminTenantAssets).FirstOrDefault(x => x.Item1 == tenantVisualizationSettings.SelectedTenant).Item2[tenantVisualizationSettings.SelectedEnv];
+                AppConfig adminConfig = new(credential, tenantVisualizationSettings.SelectedConfig.ApiBaseUrl, tenantVisualizationSettings.SelectedConfig.ApiVersion);
                 GetWindow<TenantConfigurationWindow>().ShowTenantConfigurationWindow(adminConfig);
             };
         }

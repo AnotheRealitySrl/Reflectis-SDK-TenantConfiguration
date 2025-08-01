@@ -21,7 +21,7 @@ namespace Reflectis.SDK.TenantConfiguration
 
         public Tenant TenantConfiguration { get; protected set; }
 
-        public AppConfig AppConfig => appConfig;
+        public AppConfig AppConfig => apiConfig;
 
         #endregion
 

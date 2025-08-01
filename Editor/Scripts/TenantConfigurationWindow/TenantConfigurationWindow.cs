@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 
 using Reflectis.SDK.Core.ApiSystem;
+using Reflectis.SDK.Core.Utilities;
 
 using System;
 using System.Collections.Generic;
@@ -67,7 +68,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             HttpSystem httpSystem = CreateInstance<HttpSystem>();
             TenantConfigurationSystem tenantConfigurationSystemAdmin = CreateInstance<TenantConfigurationSystem>();
 
-            AppConfig appConfig = new(app.AppId, app.AppSecret, app.ApiBaseUrl, app.ApiVersion);
+            AppConfig appConfig = new(app.Credential, app.ApiBaseUrl, app.ApiVersion);
             await tenantConfigurationSystemAdmin.Init(appConfig, httpSystem);
 
             container = root.Q<VisualElement>("PropertiesContainer");
@@ -76,8 +77,8 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             tenantConfiguration = tenant.Config.ToObject<Dictionary<string, object>>();
 
             VisualElement credentials = root.Q<VisualElement>("Credentials");
-            credentials.Q<VisualElement>(nameof(app.AppId)).Q<Label>("Value").text = app.AppId;
-            credentials.Q<VisualElement>(nameof(app.AppSecret)).Q<Label>("Value").text = app.AppSecret;
+            credentials.Q<VisualElement>(nameof(HmacCredential.AppId)).Q<Label>("Value").text = app.Credential.AppId.ToString();
+            credentials.Q<VisualElement>(nameof(HmacCredential.AppSecret)).Q<Label>("Value").text = app.Credential.AppSecret;
 
             // Create editable wrapper items
             editableConfigItems = new List<EditableConfigItem>();
