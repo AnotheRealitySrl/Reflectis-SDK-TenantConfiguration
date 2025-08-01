@@ -75,6 +75,10 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
 
             tenantConfiguration = tenant.Config.ToObject<Dictionary<string, object>>();
 
+            VisualElement credentials = root.Q<VisualElement>("Credentials");
+            credentials.Q<VisualElement>(nameof(app.AppId)).Q<Label>("Value").text = app.AppId;
+            credentials.Q<VisualElement>(nameof(app.AppSecret)).Q<Label>("Value").text = app.AppSecret;
+
             // Create editable wrapper items
             editableConfigItems = new List<EditableConfigItem>();
             foreach (var el in tenantConfiguration)

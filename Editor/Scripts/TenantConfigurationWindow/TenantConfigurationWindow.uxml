@@ -1,6 +1,20 @@
 <engine:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <Style src="project://database/Packages/com.anotherealitysrl.reflectis-sdk-tenantconfiguration/Editor/Scripts/TenantAdminWindow/TenantConfigurationEditorWindow.uss?fileID=7433441132597879392&amp;guid=2709685676303ee4182e7619466c1e03&amp;type=3#TenantConfigurationEditorWindow" />
-    <engine:Label text="Selected tenant info" name="Title" />
-    <engine:VisualElement name="PropertiesContainer" style="flex-grow: 1;" />
+    <Style src="project://database/Packages/com.anotherealitysrl.reflectis-sdk-tenantconfiguration/Editor/Scripts/TenantConfigurationWindow/TenantConfigurationWindow.uss?fileID=7433441132597879392&amp;guid=2709685676303ee4182e7619466c1e03&amp;type=3#TenantConfigurationWindow" />
+    <engine:VisualElement name="Credentials" style="flex-shrink: 0;">
+        <engine:Label text="Admin credentials" name="Header" class="section-header" />
+        <engine:VisualElement name="AppId" class="appconfig-item">
+            <engine:Label text="App Id:" name="Key" />
+            <engine:Label text="Label" name="Value" class="appconfig-item-value" />
+        </engine:VisualElement>
+        <engine:VisualElement name="AppSecret" class="appconfig-item">
+            <engine:Label text="App secret:" name="Key" />
+            <engine:Label text="Label" name="Value" class="appconfig-item-value" />
+        </engine:VisualElement>
+    </engine:VisualElement>
+    <engine:VisualElement name="Separator" class="separator" />
+    <engine:VisualElement name="PropertiesContainer">
+        <engine:Label text="Selected tenant info" name="Header" class="section-header" />
+    </engine:VisualElement>
+    <engine:VisualElement name="Separator" class="separator" />
     <engine:Button text="Update tenant configuration" name="UpdateTenantConfigurationButton" />
 </engine:UXML>

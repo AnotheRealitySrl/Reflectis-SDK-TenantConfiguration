@@ -1,26 +1,31 @@
 <engine:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <Style src="project://database/Packages/com.anotherealitysrl.reflectis-sdk-tenantconfiguration/Editor/Scripts/TenantSelectionEditorWindow.uss?fileID=7433441132597879392&amp;guid=a531e079216b63e4395116a378c9bb63&amp;type=3#TenantSelectionEditorWindow" />
+    <Style src="project://database/Packages/com.anotherealitysrl.reflectis-sdk-tenantconfiguration/Editor/Scripts/TenantManagementWindow/TenantSelectionWindow.uss?fileID=7433441132597879392&amp;guid=a531e079216b63e4395116a378c9bb63&amp;type=3#TenantSelectionWindow" />
     <engine:VisualElement style="flex-grow: 1; margin-top: 10px; margin-right: 10px; margin-bottom: 10px; margin-left: 10px;">
-        <engine:ScrollView style="flex-direction: row; flex-grow: 1;" />
-        <engine:VisualElement name="SelectedTenantConfig" style="flex-grow: 1;">
-            <engine:VisualElement style="flex-direction: row; margin-top: 10px; margin-right: 0; margin-bottom: 10px; margin-left: 0;">
-                <engine:Label text="App Id:" />
-                <engine:Label text="Label" name="AppId" style="-unity-font-style: bold;" />
+        <engine:VisualElement name="SelectedTenantConfig" style="flex-shrink: 0;">
+            <engine:Label text="Selected tenant configuration" name="Header" class="section-header" />
+            <engine:VisualElement name="AppId" class="appconfig-item">
+                <engine:Label text="App Id:" name="Key" />
+                <engine:Label text="Label" name="Value" class="appconfig-item-value" />
             </engine:VisualElement>
-            <engine:VisualElement style="flex-direction: row; margin-top: 10px; margin-right: 0; margin-bottom: 10px; margin-left: 0;">
-                <engine:Label text="App secret:" />
-                <engine:Label text="Label" name="AppSecret" style="-unity-font-style: bold;" />
+            <engine:VisualElement name="AppSecret" class="appconfig-item">
+                <engine:Label text="App secret:" name="Key" />
+                <engine:Label text="Label" name="Value" class="appconfig-item-value" />
             </engine:VisualElement>
-            <engine:VisualElement style="flex-direction: row; margin-top: 10px; margin-right: 0; margin-bottom: 10px; margin-left: 0;">
-                <engine:Label text="Tenant configuration base url: " />
-                <engine:Label text="Label" name="TenantConfigurationUrl" style="-unity-font-style: bold;" />
+            <engine:VisualElement name="ApiBaseUrl" class="appconfig-item">
+                <engine:Label text="Tenant configuration base url: " name="Key" />
+                <engine:Label text="Label" name="Value" class="appconfig-item-value" />
             </engine:VisualElement>
-            <engine:VisualElement style="flex-direction: row; margin-top: 10px; margin-right: 0; margin-bottom: 10px; margin-left: 0;">
-                <engine:Label text="Tenant configuration version:" />
-                <engine:Label text="Label" name="TenantConfigurationVersion" style="-unity-font-style: bold;" />
+            <engine:VisualElement name="ApiVersion" class="appconfig-item">
+                <engine:Label text="Tenant configuration version:" name="Key" />
+                <engine:Label text="Label" name="Value" class="appconfig-item-value" />
             </engine:VisualElement>
         </engine:VisualElement>
-        <engine:VisualElement name="ButtonsContainer" style="flex-direction: row; align-items: center; justify-content: center;">
+        <engine:VisualElement name="Separator" class="separator" />
+        <engine:ScrollView style="flex-direction: row; margin-top: 5px; margin-bottom: 5px;">
+            <engine:Label text="Available tenants" name="Header" class="section-header" />
+        </engine:ScrollView>
+        <engine:VisualElement name="Separator" class="separator" />
+        <engine:VisualElement name="ButtonsContainer" style="flex-direction: row; align-items: center; justify-content: center; flex-shrink: 0;">
             <engine:Button text="Configure app" name="ConfigureAppButton" />
             <engine:Button text="Build with selected config" name="BuildButton" />
             <engine:Button text="Configure tenant" name="ConfigureTenantButton" />

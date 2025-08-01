@@ -81,14 +81,6 @@ namespace Reflectis.SDK.TenantConfiguration
             return new ApiResponse<TenantConfig>(request.responseCode, request.error, request.downloadHandler.text);
         }
 
-        public async Task<ApiResponse<JwtToken>> GetToken()
-        {
-            using UnityWebRequest request = await BuildRequest(UnityWebRequest.kHttpVerbGET, $"/apiserver/token", authentication: EAuthentication.Hmac);
-            await request.SendWebRequest();
-
-            return new ApiResponse<JwtToken>(request.responseCode, request.error, request.downloadHandler.text);
-        }
-
 
         #endregion
     }

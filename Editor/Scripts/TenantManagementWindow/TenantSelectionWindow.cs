@@ -113,28 +113,28 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
 
             selectedTenantConfigSection.dataSource = tenantVisualizationSettings.SelectedConfig;
 
-            Label appIdLabel = selectedTenantConfigSection.Q<Label>("AppId");
+            Label appIdLabel = selectedTenantConfigSection.Q<VisualElement>("AppId").Q<Label>("Value");
             appIdLabel.SetBinding(nameof(appIdLabel.text), new DataBinding()
             {
                 dataSourcePath = PropertyPath.FromName(nameof(AppConfig.AppId)),
                 bindingMode = BindingMode.ToTarget
             });
 
-            Label appSecretLabel = selectedTenantConfigSection.Q<Label>("AppSecret");
+            Label appSecretLabel = selectedTenantConfigSection.Q<VisualElement>("AppSecret").Q<Label>("Value");
             appSecretLabel.SetBinding(nameof(appSecretLabel.text), new DataBinding()
             {
                 dataSourcePath = PropertyPath.FromName(nameof(AppConfig.AppSecret)),
                 bindingMode = BindingMode.ToTarget
             });
 
-            Label tenantConfigurationUrlLabel = selectedTenantConfigSection.Q<Label>("TenantConfigurationUrl");
+            Label tenantConfigurationUrlLabel = selectedTenantConfigSection.Q<VisualElement>("ApiBaseUrl").Q<Label>("Value");
             tenantConfigurationUrlLabel.SetBinding(nameof(tenantConfigurationUrlLabel.text), new DataBinding()
             {
                 dataSourcePath = PropertyPath.FromName(nameof(AppConfig.ApiBaseUrl)),
                 bindingMode = BindingMode.ToTarget
             });
 
-            Label tenantConfigurationVersionLabel = selectedTenantConfigSection.Q<Label>("TenantConfigurationVersion");
+            Label tenantConfigurationVersionLabel = selectedTenantConfigSection.Q<VisualElement>("ApiVersion").Q<Label>("Value");
             tenantConfigurationVersionLabel.SetBinding(nameof(tenantConfigurationVersionLabel.text), new DataBinding()
             {
                 dataSourcePath = PropertyPath.FromName(nameof(AppConfig.ApiVersion)),
@@ -181,7 +181,9 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             configureTenantButton.clicked += () =>
             {
                 TenantConfigurationWindow.ShowWindow();
-                GetWindow<TenantConfigurationWindow>().ShowTenantConfigurationWindow(tenantVisualizationSettings.GetTenantConfigurations(tenantVisualizationSettings.AdminTenantAssets).FirstOrDefault(x => x.Item1 == tenantVisualizationSettings.SelectedTenant).Item2[tenantVisualizationSettings.SelectedEnv]);
+                AppConfig partialConfig = tenantVisualizationSettings.GetTenantConfigurations(tenantVisualizationSettings.AdminTenantAssets).FirstOrDefault(x => x.Item1 == tenantVisualizationSettings.SelectedTenant).Item2[tenantVisualizationSettings.SelectedEnv];
+                AppConfig adminConfig = new(partialConfig.AppId, partialConfig.AppSecret, tenantVisualizationSettings.SelectedConfig.ApiBaseUrl, tenantVisualizationSettings.SelectedConfig.ApiVersion);
+                GetWindow<TenantConfigurationWindow>().ShowTenantConfigurationWindow(adminConfig);
             };
         }
 
