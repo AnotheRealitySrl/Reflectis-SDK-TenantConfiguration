@@ -124,7 +124,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             Label appSecretLabel = selectedTenantConfigSection.Q<VisualElement>("AppSecret").Q<Label>("Value");
             appSecretLabel.SetBinding(nameof(appSecretLabel.text), new DataBinding()
             {
-                dataSourcePath = new PropertyPath($"{nameof(AppConfig.Credential)}.{nameof(HmacCredential.AppId)}"),
+                dataSourcePath = new PropertyPath($"{nameof(AppConfig.Credential)}.{nameof(HmacCredential.AppSecret)}"),
                 bindingMode = BindingMode.ToTarget
             });
 
