@@ -14,6 +14,22 @@
     <engine:VisualElement name="Separator" class="separator" />
     <engine:VisualElement name="PropertiesContainer">
         <engine:Label text="Selected tenant info" name="Header" class="section-header" />
+        <engine:VisualElement name="TenantId" class="appconfig-item">
+            <engine:Label text="Tenant id:" name="Key" />
+            <engine:Label text="Label" name="Value" class="appconfig-item-value" />
+        </engine:VisualElement>
+        <engine:VisualElement name="TenantLabel" class="appconfig-item">
+            <engine:Label text="Tenant label:" name="TenantLabel" />
+            <engine:Label text="Label" name="Value" class="appconfig-item-value" />
+        </engine:VisualElement>
+        <engine:VisualElement name="TenantNote" class="appconfig-item">
+            <engine:Label text="Tenant note:" name="TenantNote" />
+            <engine:Label text="Label" name="Value" class="appconfig-item-value" />
+        </engine:VisualElement>
+        <engine:VisualElement name="TenantStatus" class="appconfig-item">
+            <engine:Label text="Tenant status:" name="TenantStatus" />
+            <engine:Label text="Label" name="Value" class="appconfig-item-value" />
+        </engine:VisualElement>
     </engine:VisualElement>
     <engine:VisualElement name="Separator" class="separator" />
     <engine:Button text="Update tenant configuration" name="UpdateTenantConfigurationButton" />

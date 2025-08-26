@@ -74,6 +74,11 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             container = root.Q<VisualElement>("PropertiesContainer");
             Tenant tenant = (await tenantConfigurationSystemAdmin.GetTenantData()).Content;
 
+            container.Q<VisualElement>("TenantId").Q<Label>("Value").text = tenant.Id.ToString();
+            container.Q<VisualElement>("TenantLabel").Q<Label>("Value").text = tenant.Label;
+            container.Q<VisualElement>("TenantNote").Q<Label>("Value").text = tenant.Note;
+            container.Q<VisualElement>("TenantStatus").Q<Label>("Value").text = tenant.Status.ToString();
+
             tenantConfiguration = tenant.Config.ToObject<Dictionary<string, object>>();
 
             VisualElement credentials = root.Q<VisualElement>("Credentials");
