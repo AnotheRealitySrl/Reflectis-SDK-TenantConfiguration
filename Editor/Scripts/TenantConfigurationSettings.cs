@@ -18,6 +18,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
         [SerializeField] private List<TextAsset> adminTenantAssets = new();
 
         [SerializeField] private AbstractAppConfigurator configurationScript;
+        [SerializeField] private AbstractPlatformSettings platformSettings;
         [SerializeField] private BuildScriptBase buildScript;
 
         public List<TextAsset> TenantAssets => tenantAssets;
@@ -29,6 +30,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
         [CreateProperty] public bool DoesAdminConfigurationExist => GetCredentials(adminTenantAssets).Exists(x => x.Item1 == SelectedTenant && x.Item2.ContainsKey(SelectedEnv));
 
         [CreateProperty] public AbstractAppConfigurator ConfigurationScript { get => configurationScript; set => configurationScript = value; }
+        [CreateProperty] public AbstractPlatformSettings PlatformSettings { get => platformSettings; set => platformSettings = value; }
         [CreateProperty] public BuildScriptBase BuildScript { get => buildScript; set => buildScript = value; }
 
 
