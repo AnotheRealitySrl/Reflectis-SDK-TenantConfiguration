@@ -1,5 +1,5 @@
 using Newtonsoft.Json;
-
+using Newtonsoft.Json.Linq;
 using Reflectis.SDK.Core.ApiSystem;
 using Reflectis.SDK.Core.Utilities;
 
@@ -29,7 +29,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
         }
     }
 
-    public class TenantConfigurationWindow : EditorWindow
+    public class AppConfigurationWindow : EditorWindow
     {
         [SerializeField] private VisualTreeAsset m_VisualTreeAsset = default;
 
@@ -39,16 +39,14 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
 
         private VisualElement root;
 
-        private Dictionary<string, object> tenantConfiguration;
-        private List<EditableConfigItem> editableConfigItems;
+        private List<EditableConfigItem> editableAppConfigurationItems;
 
-        private VisualElement container;
+        private VisualElement appConfigContainer;
 
-        [MenuItem("Reflectis Worlds/Tenant Configuration Window")]
-        public static TenantConfigurationWindow ShowWindow()
+        public static AppConfigurationWindow ShowWindow()
         {
-            TenantConfigurationWindow wnd = GetWindow<TenantConfigurationWindow>();
-            wnd.titleContent = new GUIContent("TenantConfigurationEditorWindow");
+            AppConfigurationWindow wnd = GetWindow<AppConfigurationWindow>();
+            wnd.titleContent = new GUIContent("AppConfigurationEditorWindow");
 
             return wnd;
         }
@@ -63,80 +61,84 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             root.Add(labelFromUXML);
         }
 
-        public async void ShowTenantConfigurationWindow(AppConfig app)
+        public async void ShowAppConfigurationWindow(AppIdentification app)
         {
             HttpSystem httpSystem = CreateInstance<HttpSystem>();
             TenantConfigurationSystem tenantConfigurationSystemAdmin = CreateInstance<TenantConfigurationSystem>();
 
-            AppConfig appConfig = new(app.Credential, app.ApiBaseUrl, app.ApiVersion);
+            AppIdentification appConfig = new(app.Credential, app.ApiBaseUrl, app.ApiVersion);
             await tenantConfigurationSystemAdmin.Init(appConfig, httpSystem);
-
-            container = root.Q<VisualElement>("PropertiesContainer");
-            Tenant tenant = (await tenantConfigurationSystemAdmin.GetTenantData()).Content;
-
-            container.Q<VisualElement>("TenantId").Q<Label>("Value").text = tenant.Id.ToString();
-            container.Q<VisualElement>("TenantLabel").Q<Label>("Value").text = tenant.Label;
-            container.Q<VisualElement>("TenantNote").Q<Label>("Value").text = tenant.Note;
-            container.Q<VisualElement>("TenantStatus").Q<Label>("Value").text = tenant.Status.ToString();
-
-            tenantConfiguration = tenant.Config.ToObject<Dictionary<string, object>>();
 
             VisualElement credentials = root.Q<VisualElement>("Credentials");
             credentials.Q<VisualElement>(nameof(HmacCredential.AppId)).Q<Label>("Value").text = app.Credential.AppId.ToString();
             credentials.Q<VisualElement>(nameof(HmacCredential.AppSecret)).Q<Label>("Value").text = app.Credential.AppSecret;
 
-            // Create editable wrapper items
-            editableConfigItems = new List<EditableConfigItem>();
-            foreach (var el in tenantConfiguration)
+
+            JObject customAppConfig = (await tenantConfigurationSystemAdmin.GetAppCustomConfig()).Content;
+
+            editableAppConfigurationItems = new List<EditableConfigItem>();
+            foreach (var el in customAppConfig)
             {
-                editableConfigItems.Add(new EditableConfigItem(el.Key, el.Value));
+                editableAppConfigurationItems.Add(new EditableConfigItem(el.Key, el.Value));
             }
+
+            appConfigContainer = root.Q<VisualElement>("AppPropertiesContainer");
 
             // Create UI elements for each editable item
-            foreach (var editableItem in editableConfigItems)
-            {
-                switch (editableItem.Value)
-                {
-                    case string _:
-                        CreateTextFieldItem(editableItem);
-                        break;
-                    case System.Int64 _:
-                        CreateNumericFieldItem(editableItem);
-                        break;
-                    case bool _:
-                        CreateCheckBoxItem(editableItem);
-                        break;
-                    default:
-                        CreateTextFieldItem(editableItem);
-                        //Debug.LogWarning($"Unsupported type for key '{editableItem.Key}': {editableItem.Value.GetType()}");
-                        break;
-                }
-            }
+            PopolateContainer(editableAppConfigurationItems, appConfigContainer);
 
-
-            Button updateTenantbutton = root.Q<Button>("UpdateTenantConfigurationButton");
-            updateTenantbutton.clicked += async () =>
+            Button updateAppbutton = root.Q<Button>("UpdateAppConfigurationButton");
+            updateAppbutton.clicked += async () =>
             {
                 // Convert the editable items back to the original dictionary format
                 Dictionary<string, object> updatedConfig = new();
-                foreach (var item in editableConfigItems)
+                foreach (var item in editableAppConfigurationItems)
                 {
                     updatedConfig[item.Key] = item.Value;
                 }
                 // Update the tenant configuration
                 //await tenantConfigurationSystemAdmin.UpdateTenantConfig(tenant.Id, JsonConvert.SerializeObject(updatedConfig));
 
+                updatedConfig = new();
+                foreach (var item in editableAppConfigurationItems)
+                {
+                    updatedConfig[item.Key] = item.Value;
+                }
+                await tenantConfigurationSystemAdmin.UpdateAppCustomConfig(JsonConvert.SerializeObject(updatedConfig));
                 // Optionally, refresh the UI or show a success message
-                Debug.Log($"Tenant {tenant.Id} configuration updated successfully. New config: {JsonConvert.SerializeObject(updatedConfig)}");
+                Debug.Log($"App configuration updated successfully. New config: {JsonConvert.SerializeObject(updatedConfig)}");
             };
         }
 
+        private void PopolateContainer(IEnumerable<EditableConfigItem> editableConfigItems, VisualElement container)
+        {
+            foreach (var editableItem in editableConfigItems)
+            {
+                VisualElement visualElement = null;
+                switch (editableItem.Value)
+                {
+                    case string _:
+                        visualElement = CreateTextFieldItem(editableItem);
+                        break;
+                    case System.Int64 _:
+                        visualElement = CreateNumericFieldItem(editableItem);
+                        break;
+                    case bool _:
+                        visualElement = CreateCheckBoxItem(editableItem);
+                        break;
+                    default:
+                        visualElement = CreateTextFieldItem(editableItem);
+                        //Debug.LogWarning($"Unsupported type for key '{editableItem.Key}': {editableItem.Value.GetType()}");
+                        break;
+                }
+                container.Add(visualElement);
+            }
+        }
 
-        private void CreateTextFieldItem(EditableConfigItem editableItem)
+
+        private VisualElement CreateTextFieldItem(EditableConfigItem editableItem)
         {
             VisualElement configItem = configurationItemTextField.Instantiate();
-
-            container.Add(configItem);
 
             TextField textField = configItem.Q<TextField>();
 
@@ -159,18 +161,12 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             };
             textField.SetBinding(nameof(TextField.value), valueBinding);
 
-            // Update the original dictionary when the editable item changes
-            textField.RegisterValueChangedCallback(evt =>
-            {
-                tenantConfiguration[editableItem.Key] = evt.newValue;
-            });
+            return configItem;
         }
 
-        private void CreateNumericFieldItem(EditableConfigItem editableItem)
+        private VisualElement CreateNumericFieldItem(EditableConfigItem editableItem)
         {
             VisualElement configItem = configurationItemNumericField.Instantiate();
-
-            container.Add(configItem);
 
             IntegerField integerField = configItem.Q<IntegerField>();
 
@@ -194,18 +190,12 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             //valueBinding.sourceToUiConverters.AddConverter((ref System.Int64 value) => Convert.ToInt32(value));
             integerField.SetBinding(nameof(IntegerField.value), valueBinding);
 
-            // Update the original dictionary when the editable item changes
-            integerField.RegisterValueChangedCallback(evt =>
-            {
-                tenantConfiguration[editableItem.Key] = evt.newValue;
-            });
+            return configItem;
         }
 
-        private void CreateCheckBoxItem(EditableConfigItem editableItem)
+        private VisualElement CreateCheckBoxItem(EditableConfigItem editableItem)
         {
             VisualElement configItem = configurationItemCheckBox.Instantiate();
-
-            container.Add(configItem);
 
             Toggle toggle = configItem.Q<Toggle>();
 
@@ -228,11 +218,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             };
             toggle.SetBinding(nameof(TextField.value), valueBinding);
 
-            // Update the original dictionary when the editable item changes
-            toggle.RegisterValueChangedCallback(evt =>
-            {
-                tenantConfiguration[editableItem.Key] = evt.newValue;
-            });
+            return configItem;
         }
     }
 

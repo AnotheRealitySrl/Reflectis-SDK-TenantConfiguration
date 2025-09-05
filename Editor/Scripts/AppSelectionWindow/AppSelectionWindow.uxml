@@ -1,8 +1,8 @@
 <engine:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="project://database/Packages/com.anotherealitysrl.reflectis-sdk-tenantconfiguration/Editor/Scripts/TenantManagementWindow/TenantSelectionWindow.uss?fileID=7433441132597879392&amp;guid=a531e079216b63e4395116a378c9bb63&amp;type=3#TenantSelectionWindow" />
     <engine:VisualElement style="flex-grow: 1; margin-top: 10px; margin-right: 10px; margin-bottom: 10px; margin-left: 10px;">
-        <engine:VisualElement name="SelectedTenantConfig" style="flex-shrink: 0;">
-            <engine:Label text="Selected tenant configuration" name="Header" class="section-header" />
+        <engine:VisualElement name="SelectedAppConfig" style="flex-shrink: 0;">
+            <engine:Label text="Selected app configuration" name="Header" class="section-header" />
             <engine:VisualElement name="AppId" class="appconfig-item">
                 <engine:Label text="App Id:" name="Key" />
                 <engine:Label text="Label" name="Value" class="appconfig-item-value" />
@@ -22,13 +22,13 @@
         </engine:VisualElement>
         <engine:VisualElement name="Separator" class="separator" />
         <engine:ScrollView style="flex-direction: row; margin-top: 5px; margin-bottom: 5px;">
-            <engine:Label text="Available tenants" name="Header" class="section-header" />
+            <engine:Label text="Available apps" name="Header" class="section-header" />
         </engine:ScrollView>
         <engine:VisualElement name="Separator" class="separator" />
         <engine:VisualElement name="ButtonsContainer" style="flex-direction: row; align-items: center; justify-content: center; flex-shrink: 0;">
-            <engine:Button text="Configure app" name="ConfigureAppButton" />
+            <engine:Button text="Change configuration" name="ChangeConfigButton" />
             <engine:Button text="Build with selected config" name="BuildButton" />
-            <engine:Button text="Configure tenant" name="ConfigureTenantButton" />
+            <engine:Button text="Configure app" name="ConfigureAppButton" />
         </engine:VisualElement>
     </engine:VisualElement>
 </engine:UXML>

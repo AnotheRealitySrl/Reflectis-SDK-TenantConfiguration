@@ -1,4 +1,5 @@
 
+using Newtonsoft.Json.Linq;
 using Reflectis.SDK.Core.ApiSystem;
 using Reflectis.SDK.Core.Utilities;
 using Reflectis.SDK.Http;
@@ -21,7 +22,9 @@ namespace Reflectis.SDK.TenantConfiguration
 
         public Tenant TenantConfiguration { get; protected set; }
 
-        public AppConfig AppConfig => apiConfig;
+        public JObject AppConfig { get; protected set; }
+
+        public AppIdentification AppIdentification => apiConfig;
 
         #endregion
 
@@ -42,10 +45,20 @@ namespace Reflectis.SDK.TenantConfiguration
                 {
                     Debug.LogError($"[{name}]: Failed to get tenant data: {tenantDataReq.ReasonPhrase}");
                 }
+
+                ApiResponse<JObject> appCustomConfigReq = await GetAppCustomConfig();
+                if (appCustomConfigReq.IsSuccess)
+                {
+                    AppConfig = appCustomConfigReq.Content;
+                }
+                else
+                {
+                    Debug.LogError($"[{name}]: Failed to get tenant data: {appCustomConfigReq.ReasonPhrase}");
+                }
             }
         }
 
-        public async Task Init(AppConfig config, HttpSystem httpSystem)
+        public async Task Init(AppIdentification config, HttpSystem httpSystem)
         {
             this.httpSystem = httpSystem;
 
@@ -80,7 +93,21 @@ namespace Reflectis.SDK.TenantConfiguration
 
             return new ApiResponse<TenantConfig>(request.responseCode, request.error, request.downloadHandler.text);
         }
+        public async Task<ApiResponse<JObject>> GetAppCustomConfig()
+        {
+            using UnityWebRequest request = await BuildRequest(UnityWebRequest.kHttpVerbGET, "manage/apps/config/custom", authentication: EAuthentication.Hmac);
+            await request.SendWebRequest();
 
+            return new(request.responseCode, request.error, request.downloadHandler.text);
+        }
+
+        public async Task<ApiResponse> UpdateAppCustomConfig(string config)
+        {
+            using UnityWebRequest request = await BuildRequest(UnityWebRequest.kHttpVerbPUT, $"manage/apps/config/custom", body: config, authentication: EAuthentication.Hmac);
+            await request.SendWebRequest();
+
+            return new ApiResponse(request.responseCode, request.error, request.downloadHandler.text);
+        }
 
         #endregion
     }

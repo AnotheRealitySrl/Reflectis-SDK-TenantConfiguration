@@ -10,7 +10,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
     {
         [SerializeField] protected TenantConfigurationSystem tenantConfigurationSystem;
 
-        public abstract Task ConfigureApp(AppConfig device);
+        public abstract Task ConfigureApp(AppIdentification device);
     }
 }
 
