@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+
 using Reflectis.SDK.Core.ApiSystem;
 using Reflectis.SDK.Core.Utilities;
 
@@ -53,10 +54,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
 
         public void CreateGUI()
         {
-            // Each editor window contains a root VisualElement object
             root = rootVisualElement;
-
-            // Instantiate UXML
             VisualElement labelFromUXML = m_VisualTreeAsset.Instantiate();
             root.Add(labelFromUXML);
         }
@@ -73,41 +71,74 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             credentials.Q<VisualElement>(nameof(HmacCredential.AppId)).Q<Label>("Value").text = app.Credential.AppId.ToString();
             credentials.Q<VisualElement>(nameof(HmacCredential.AppSecret)).Q<Label>("Value").text = app.Credential.AppSecret;
 
-
             JObject customAppConfig = (await tenantConfigurationSystemAdmin.GetAppCustomConfig()).Content;
 
             editableAppConfigurationItems = new List<EditableConfigItem>();
             foreach (var el in customAppConfig)
             {
-                editableAppConfigurationItems.Add(new EditableConfigItem(el.Key, el.Value));
+                // Normalizza i JValue in primitivi .NET per evitare che vengano trattati come stringhe
+                editableAppConfigurationItems.Add(new EditableConfigItem(el.Key, NormalizeJToken(el.Value)));
             }
 
             appConfigContainer = root.Q<VisualElement>("AppPropertiesContainer");
-
-            // Create UI elements for each editable item
+            appConfigContainer.Clear();
             PopolateContainer(editableAppConfigurationItems, appConfigContainer);
 
             Button updateAppbutton = root.Q<Button>("UpdateAppConfigurationButton");
-            updateAppbutton.clicked += async () =>
-            {
-                // Convert the editable items back to the original dictionary format
-                Dictionary<string, object> updatedConfig = new();
-                foreach (var item in editableAppConfigurationItems)
-                {
-                    updatedConfig[item.Key] = item.Value;
-                }
-                // Update the tenant configuration
-                //await tenantConfigurationSystemAdmin.UpdateTenantConfig(tenant.Id, JsonConvert.SerializeObject(updatedConfig));
+            updateAppbutton.clicked -= OnUpdateClicked; // evita duplicazioni se riaperto
+            updateAppbutton.clicked += OnUpdateClicked;
 
-                updatedConfig = new();
-                foreach (var item in editableAppConfigurationItems)
+            async void OnUpdateClicked()
+            {
+                // Costruisce JObject preservando i tipi primitivi
+                JObject updatedConfig = BuildUpdatedConfigJObject();
+                await tenantConfigurationSystemAdmin.UpdateAppCustomConfig(updatedConfig.ToString(Formatting.None));
+                Debug.Log($"App configuration updated successfully. New config: {updatedConfig}");
+            }
+        }
+
+        private JObject BuildUpdatedConfigJObject()
+        {
+            var jobj = new JObject();
+            foreach (var item in editableAppConfigurationItems)
+            {
+                if (item.Value is JToken jt)
                 {
-                    updatedConfig[item.Key] = item.Value;
+                    jobj[item.Key] = jt;
                 }
-                await tenantConfigurationSystemAdmin.UpdateAppCustomConfig(JsonConvert.SerializeObject(updatedConfig));
-                // Optionally, refresh the UI or show a success message
-                Debug.Log($"App configuration updated successfully. New config: {JsonConvert.SerializeObject(updatedConfig)}");
-            };
+                else
+                {
+                    // Usa FromObject per preservare tipo numerico/bool
+                    jobj[item.Key] = JToken.FromObject(item.Value ?? JValue.CreateNull());
+                }
+            }
+            return jobj;
+        }
+
+        private object NormalizeJToken(JToken token)
+        {
+            if (token is JValue jv)
+            {
+                switch (jv.Type)
+                {
+                    case JTokenType.Integer:
+                        // Usa Int64 per compatibilità JSON numerica generica
+                        return jv.Value<long>();
+                    case JTokenType.Float:
+                        return jv.Value<double>();
+                    case JTokenType.Boolean:
+                        return jv.Value<bool>();
+                    case JTokenType.String:
+                        return jv.Value<string>();
+                    case JTokenType.Null:
+                        return null;
+                    default:
+                        return jv.Value<object>();
+                }
+            }
+            if (token is JObject || token is JArray)
+                return token; // mantieni come JToken complesso
+            return token;
         }
 
         private void PopolateContainer(IEnumerable<EditableConfigItem> editableConfigItems, VisualElement container)
@@ -115,51 +146,118 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             foreach (var editableItem in editableConfigItems)
             {
                 VisualElement visualElement = null;
+
+                // Gestione JValue rimasti (nel caso di caricamenti futuri)
+                if (editableItem.Value is JValue jv)
+                {
+                    editableItem.Value = NormalizeJToken(jv);
+                }
+
                 switch (editableItem.Value)
                 {
                     case string _:
                         visualElement = CreateTextFieldItem(editableItem);
                         break;
-                    case System.Int64 _:
+                    case long _:
+                    case int _:
                         visualElement = CreateNumericFieldItem(editableItem);
+                        break;
+                    case double _:
+                    case float _:
+                    case decimal _:
+                        // Per semplicità, numeri floating usano un TextField (potresti creare un DoubleField separato)
+                        visualElement = CreateTextFieldItem(editableItem);
                         break;
                     case bool _:
                         visualElement = CreateCheckBoxItem(editableItem);
                         break;
+                    case JObject _:
+                    case JArray _:
+                        visualElement = CreateObjectFieldItem(editableItem);
+                        break;
+                    case null:
+                        visualElement = CreateTextFieldItem(editableItem);
+                        break;
                     default:
                         visualElement = CreateTextFieldItem(editableItem);
-                        //Debug.LogWarning($"Unsupported type for key '{editableItem.Key}': {editableItem.Value.GetType()}");
                         break;
                 }
                 container.Add(visualElement);
             }
         }
 
-
-        private VisualElement CreateTextFieldItem(EditableConfigItem editableItem)
+        // CreateObjectFieldItem:
+        // 1. Instantiate same VisualTreeAsset used for text fields.
+        // 2. Configure TextField as multiline to display JSON.
+        // 3. Initialize value with pretty printed JSON (using JToken.ToString or JsonConvert).
+        // 4. On change, try parse JSON; if success update EditableConfigItem.Value with parsed JToken.
+        // 5. If parsing fails, add a CSS class "error"; keep previous valid JToken.
+        private VisualElement CreateObjectFieldItem(EditableConfigItem editableItem)
         {
             VisualElement configItem = configurationItemTextField.Instantiate();
 
             TextField textField = configItem.Q<TextField>();
+            if (textField == null)
+                return configItem;
 
-            // Set the data source to the editable wrapper
-            textField.dataSource = editableItem;
+            textField.multiline = true;
+            textField.label = editableItem.Key;
 
-            // Bind the label to the Key property
-            DataBinding keyBinding = new()
+            if (editableItem.Value is JToken token)
             {
-                dataSourcePath = PropertyPath.FromName("Key"),
-                bindingMode = BindingMode.TwoWay
-            };
-            textField.SetBinding(nameof(TextField.label), keyBinding);
-
-            // Bind the value to the Value property
-            DataBinding valueBinding = new()
+                textField.value = token.ToString(Formatting.Indented);
+            }
+            else
             {
-                dataSourcePath = PropertyPath.FromName("Value"),
-                bindingMode = BindingMode.TwoWay
-            };
-            textField.SetBinding(nameof(TextField.value), valueBinding);
+                try
+                {
+                    textField.value = JsonConvert.SerializeObject(editableItem.Value, Formatting.Indented);
+                    editableItem.Value = JToken.Parse(textField.value);
+                }
+                catch
+                {
+                    textField.value = "{}";
+                    editableItem.Value = JToken.Parse(textField.value);
+                }
+            }
+
+            JToken lastValid = editableItem.Value as JToken;
+
+            textField.RegisterValueChangedCallback(evt =>
+            {
+                var newValue = evt.newValue;
+                try
+                {
+                    var parsed = JToken.Parse(newValue);
+                    editableItem.Value = parsed;
+                    lastValid = parsed;
+                    textField.RemoveFromClassList("error");
+                }
+                catch
+                {
+                    textField.AddToClassList("error");
+                }
+            });
+
+            return configItem;
+        }
+
+        private VisualElement CreateTextFieldItem(EditableConfigItem editableItem)
+        {
+            VisualElement configItem = configurationItemTextField.Instantiate();
+            TextField textField = configItem.Q<TextField>();
+
+            if (textField == null)
+                return configItem;
+
+            textField.label = editableItem.Key;
+            textField.value = editableItem.Value?.ToString() ?? string.Empty;
+
+            textField.RegisterValueChangedCallback(evt =>
+            {
+                // Mantieni come stringa pura
+                editableItem.Value = evt.newValue;
+            });
 
             return configItem;
         }
@@ -167,28 +265,19 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
         private VisualElement CreateNumericFieldItem(EditableConfigItem editableItem)
         {
             VisualElement configItem = configurationItemNumericField.Instantiate();
-
             IntegerField integerField = configItem.Q<IntegerField>();
 
-            // Set the data source to the editable wrapper
-            integerField.dataSource = editableItem;
+            if (integerField == null)
+                return configItem;
 
-            // Bind the label to the Key property
-            DataBinding keyBiding = new()
-            {
-                dataSourcePath = PropertyPath.FromName("Key"),
-                bindingMode = BindingMode.TwoWay
-            };
-            integerField.SetBinding(nameof(IntegerField.label), keyBiding);
-
+            integerField.label = editableItem.Key;
             integerField.value = Convert.ToInt32(editableItem.Value);
-            DataBinding valueBinding = new()
+
+            integerField.RegisterValueChangedCallback(evt =>
             {
-                dataSourcePath = PropertyPath.FromName("Value"),
-                bindingMode = BindingMode.TwoWay
-            };
-            //valueBinding.sourceToUiConverters.AddConverter((ref System.Int64 value) => Convert.ToInt32(value));
-            integerField.SetBinding(nameof(IntegerField.value), valueBinding);
+                // Salva sempre come Int64 per coerenza (JSON numeri interi)
+                editableItem.Value = (long)evt.newValue;
+            });
 
             return configItem;
         }
@@ -196,27 +285,18 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
         private VisualElement CreateCheckBoxItem(EditableConfigItem editableItem)
         {
             VisualElement configItem = configurationItemCheckBox.Instantiate();
-
             Toggle toggle = configItem.Q<Toggle>();
 
-            // Set the data source to the editable wrapper
-            toggle.dataSource = editableItem;
+            if (toggle == null)
+                return configItem;
 
-            // Bind the label to the Key property
-            DataBinding keyBinding = new()
-            {
-                dataSourcePath = PropertyPath.FromName("Key"),
-                bindingMode = BindingMode.TwoWay
-            };
-            toggle.SetBinding(nameof(TextField.label), keyBinding);
+            toggle.label = editableItem.Key;
+            toggle.value = editableItem.Value is bool b && b;
 
-            // Bind the value to the Value property
-            DataBinding valueBinding = new()
+            toggle.RegisterValueChangedCallback(evt =>
             {
-                dataSourcePath = PropertyPath.FromName("Value"),
-                bindingMode = BindingMode.TwoWay
-            };
-            toggle.SetBinding(nameof(TextField.value), valueBinding);
+                editableItem.Value = evt.newValue;
+            });
 
             return configItem;
         }
