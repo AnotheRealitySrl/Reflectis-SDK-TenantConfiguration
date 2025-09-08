@@ -2,6 +2,7 @@ using Reflectis.SDK.Core.ApiSystem;
 using Reflectis.SDK.Core.Utilities;
 using Reflectis.SDK.TenantConfiguration;
 using Reflectis.SDK.TenantConfiguration.Editor;
+
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -86,7 +87,7 @@ namespace Reflectis.SDK.AppConfiguration.Editor
                     toggles.Add(toggle);
                     toggle.dataSource = (app.Item1, envConfig.Key);
                     toggle.text = envConfig.Key;
-                    toggle.RegisterCallbackOnce<ChangeEvent<bool>>(evt =>
+                    toggle.RegisterCallback<ChangeEvent<bool>>(evt =>
                     {
                         if (evt.newValue)
                         {
