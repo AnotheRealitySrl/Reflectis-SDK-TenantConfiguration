@@ -22,7 +22,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
 
         [CreateProperty] public string SelectedApp { get; set; }
         [CreateProperty] public string SelectedEnv { get; set; }
-        [CreateProperty] public AppIdentification SelectedConfig { get; set; } = new();
+        [CreateProperty] public AppIdentification SelectedConfig { get; set; }
 
         [CreateProperty] public AbstractAppConfigurator ConfigurationScript { get => configurationScript; set => configurationScript = value; }
         [CreateProperty] public BuildScriptBase BuildScript { get => buildScript; set => buildScript = value; }
