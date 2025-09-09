@@ -22,9 +22,9 @@ namespace Reflectis.SDK.TenantConfiguration
         [SerializeField] private string releaseCompanyName = "";
         [SerializeField] private string tenantNickname;
 
+        [CreateProperty] public string ApplicationUrl => applicationUrl;
         public string ProfileApiUrl => profileApiUrl;
         public string ProfileApiVersion => profileApiVersion;
-        [CreateProperty] public string ApplicationUrl => applicationUrl;
         public string ApplicationApiUrl => applicationApiUrl;
         public string ApplicationApiVersion => applicationApiVersion;
         public string RealtimeApiUrl => realtimeApiUrl;

@@ -54,7 +54,7 @@ namespace Reflectis.SDK.TenantConfiguration
                 }
                 else
                 {
-                    Debug.LogError($"[{name}]: Failed to get tenant data: {appCustomConfigReq.ReasonPhrase}");
+                    Debug.LogError($"[{name}]: Failed to get app data: {appCustomConfigReq.ReasonPhrase}");
                 }
             }
         }
