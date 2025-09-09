@@ -16,7 +16,7 @@ using UnityEngine.UIElements;
 
 namespace Reflectis.SDK.AppConfiguration.Editor
 {
-    public class AppSelectionWindow : EditorWindow
+    public class TenantSelectionWindow : EditorWindow
     {
         [SerializeField] private VisualTreeAsset m_VisualTreeAsset = default;
         [SerializeField] private VisualTreeAsset appVisualTree = default;
@@ -34,7 +34,7 @@ namespace Reflectis.SDK.AppConfiguration.Editor
         [MenuItem("Reflectis/SDK/AppConfiguration/Show available apps")]
         public static void ShowExample()
         {
-            AppSelectionWindow wnd = GetWindow<AppSelectionWindow>();
+            TenantSelectionWindow wnd = GetWindow<TenantSelectionWindow>();
             wnd.titleContent = new GUIContent("Show available apps");
         }
 
