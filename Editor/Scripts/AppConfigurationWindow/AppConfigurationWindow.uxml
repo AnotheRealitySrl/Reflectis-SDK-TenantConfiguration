@@ -1,18 +1,7 @@
 <engine:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <Style src="project://database/Assets/AppConfigurationWindow.uss?fileID=7433441132597879392&amp;guid=2a55abfc0a2036642adffac3b7ce5b8f&amp;type=3#AppConfigurationWindow" />
+    <Style src="project://database/Packages/com.anotherealitysrl.reflectis-sdk-tenantconfiguration/Editor/Scripts/AppConfigurationWindow/AppConfigurationWindow.uss?fileID=7433441132597879392&amp;guid=2a55abfc0a2036642adffac3b7ce5b8f&amp;type=3#AppConfigurationWindow" />
     <engine:VisualElement name="AppName" style="font-size: 18px;">
         <engine:Label text="AppName" name="Header" class="section-header" style="font-size: 20px; -unity-font-style: bold;" />
-    </engine:VisualElement>
-    <engine:VisualElement name="Credentials" style="flex-shrink: 0;">
-        <engine:Label text="Credentials" name="Header" class="section-header" />
-        <engine:VisualElement name="AppId" class="appconfig-item">
-            <engine:Label text="App Id:" name="Key" />
-            <engine:Label text="Label" name="Value" class="appconfig-item-value" />
-        </engine:VisualElement>
-        <engine:VisualElement name="AppSecret" class="appconfig-item">
-            <engine:Label text="App secret:" name="Key" />
-            <engine:Label text="Label" name="Value" class="appconfig-item-value" />
-        </engine:VisualElement>
     </engine:VisualElement>
     <engine:VisualElement name="Separator" class="separator" />
     <engine:VisualElement name="AppPropertiesContainer">

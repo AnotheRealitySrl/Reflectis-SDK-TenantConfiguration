@@ -2,7 +2,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 using Reflectis.SDK.Core.ApiSystem;
-using Reflectis.SDK.Core.Utilities;
 
 using System;
 using System.Collections.Generic;
@@ -59,19 +58,17 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             root.Add(labelFromUXML);
         }
 
-        public async void ShowAppConfigurationWindow(AppIdentification app)
+        public async void ShowAppConfigurationWindow(AppIdentification app, AppConfigurationSettings appConfigurationSettings)
         {
-            HttpSystem httpSystem = CreateInstance<HttpSystem>();
-            TenantConfigurationSystem tenantConfigurationSystemAdmin = CreateInstance<TenantConfigurationSystem>();
+            TenantConfigurationSystem tenantConfigurationSystem = appConfigurationSettings.ConfigurationScript.TenantConfigurationSystem;
 
             AppIdentification appConfig = new(app.Credential, app.ApiBaseUrl, app.ApiVersion);
-            await tenantConfigurationSystemAdmin.Init(appConfig, httpSystem);
+            await appConfigurationSettings.ConfigurationScript.TenantConfigurationSystem.Init(appConfig);
 
-            VisualElement credentials = root.Q<VisualElement>("Credentials");
-            credentials.Q<VisualElement>(nameof(HmacCredential.AppId)).Q<Label>("Value").text = app.Credential.AppId.ToString();
-            credentials.Q<VisualElement>(nameof(HmacCredential.AppSecret)).Q<Label>("Value").text = app.Credential.AppSecret;
+            Label appName = root.Q<VisualElement>("AppName").Q<Label>();
+            appName.text = tenantConfigurationSystem.TenantConfiguration.Label;
 
-            JObject customAppConfig = (await tenantConfigurationSystemAdmin.GetAppCustomConfig()).Content;
+            JObject customAppConfig = (await tenantConfigurationSystem.GetAppCustomConfig()).Content;
 
             editableAppConfigurationItems = new List<EditableConfigItem>();
             foreach (var el in customAppConfig)
@@ -92,7 +89,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             {
                 // Costruisce JObject preservando i tipi primitivi
                 JObject updatedConfig = BuildUpdatedConfigJObject();
-                await tenantConfigurationSystemAdmin.UpdateAppCustomConfig(updatedConfig.ToString(Formatting.None));
+                await tenantConfigurationSystem.UpdateAppCustomConfig(updatedConfig.ToString(Formatting.None));
                 Debug.Log($"App configuration updated successfully. New config: {updatedConfig}");
             }
         }
@@ -145,7 +142,6 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
         {
             foreach (var editableItem in editableConfigItems)
             {
-                VisualElement visualElement = null;
 
                 // Gestione JValue rimasti (nel caso di caricamenti futuri)
                 if (editableItem.Value is JValue jv)
@@ -153,6 +149,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                     editableItem.Value = NormalizeJToken(jv);
                 }
 
+                VisualElement visualElement;
                 switch (editableItem.Value)
                 {
                     case string _:

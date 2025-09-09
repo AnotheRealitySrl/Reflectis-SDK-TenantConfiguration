@@ -1,5 +1,6 @@
 
 using Newtonsoft.Json.Linq;
+
 using Reflectis.SDK.Core.ApiSystem;
 using Reflectis.SDK.Core.Utilities;
 using Reflectis.SDK.Http;
@@ -58,13 +59,6 @@ namespace Reflectis.SDK.TenantConfiguration
             }
         }
 
-        public async Task Init(AppIdentification config, HttpSystem httpSystem)
-        {
-            this.httpSystem = httpSystem;
-
-            await Init(config);
-        }
-
         #endregion
 
         #region Manage apps
@@ -77,7 +71,6 @@ namespace Reflectis.SDK.TenantConfiguration
             return new ApiResponse<object>(request.responseCode, request.error, request.downloadHandler.text);
         }
 
-
         public async Task<ApiResponse<Tenant>> GetTenantData()
         {
             using UnityWebRequest request = await BuildRequest(UnityWebRequest.kHttpVerbGET, "manage/apps/tenant", authentication: EAuthentication.Hmac);
@@ -86,13 +79,6 @@ namespace Reflectis.SDK.TenantConfiguration
             return new(request.responseCode, request.error, request.downloadHandler.text);
         }
 
-        public async Task<ApiResponse<TenantConfig>> UpdateTenantConfig(int id, string config)
-        {
-            using UnityWebRequest request = await BuildRequest(UnityWebRequest.kHttpVerbPUT, $"/manage/tenants/{id}/configuration", body: config);
-            await request.SendWebRequest();
-
-            return new ApiResponse<TenantConfig>(request.responseCode, request.error, request.downloadHandler.text);
-        }
         public async Task<ApiResponse<JObject>> GetAppCustomConfig()
         {
             using UnityWebRequest request = await BuildRequest(UnityWebRequest.kHttpVerbGET, "manage/apps/config/custom", authentication: EAuthentication.Hmac);

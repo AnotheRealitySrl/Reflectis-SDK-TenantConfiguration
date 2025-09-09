@@ -1,6 +1,5 @@
 using Reflectis.SDK.Core.ApiSystem;
 using Reflectis.SDK.Core.Utilities;
-using Reflectis.SDK.TenantConfiguration;
 using Reflectis.SDK.TenantConfiguration.Editor;
 
 using System.Collections.Generic;
@@ -23,9 +22,7 @@ namespace Reflectis.SDK.AppConfiguration.Editor
         [SerializeField] private VisualTreeAsset envVisualTree = default;
         [SerializeField] private VisualTreeAsset appConfigurationVisualTree = default;
 
-        [SerializeField] private TenantConfigurationSystem tenantConfigurationSystem = default;
-
-        private AppConfigurationSettings appVisualizationSettings;
+        private AppConfigurationSettings appConfigurationSettings;
 
         private const string settings_folder_path = "Assets/Editor/AppConfiguration";
         private const string settings_configuration_path = "AppConfigurationSettings.asset";
@@ -47,24 +44,24 @@ namespace Reflectis.SDK.AppConfiguration.Editor
             VisualElement labelFromUXML = m_VisualTreeAsset.Instantiate();
             root.Add(labelFromUXML);
 
-            string appVisualizationSettingsAssetGuid = AssetDatabase.FindAssets("t:" + typeof(AppConfigurationSettings).Name).ToList().FirstOrDefault();
-            appVisualizationSettings = AssetDatabase.LoadAssetAtPath<AppConfigurationSettings>(AssetDatabase.GUIDToAssetPath(appVisualizationSettingsAssetGuid));
+            string appConfigurationSettingsAssetGuid = AssetDatabase.FindAssets("t:" + typeof(AppConfigurationSettings).Name).ToList().FirstOrDefault();
+            appConfigurationSettings = AssetDatabase.LoadAssetAtPath<AppConfigurationSettings>(AssetDatabase.GUIDToAssetPath(appConfigurationSettingsAssetGuid));
 
-            if (appVisualizationSettings == null)
+            if (appConfigurationSettings == null)
             {
                 EnsureFolderExists(settings_folder_path);
 
-                appVisualizationSettings = CreateInstance<AppConfigurationSettings>();
+                appConfigurationSettings = CreateInstance<AppConfigurationSettings>();
                 string settingsAssetPath = $"{settings_folder_path}/{settings_configuration_path}";
-                AssetDatabase.CreateAsset(appVisualizationSettings, settingsAssetPath);
+                AssetDatabase.CreateAsset(appConfigurationSettings, settingsAssetPath);
                 AssetDatabase.SaveAssets();
             }
 
 
-            if (!appVisualizationSettings)
+            if (!appConfigurationSettings)
             {
-                appVisualizationSettings = CreateInstance<AppConfigurationSettings>();
-                AssetDatabase.CreateAsset(appVisualizationSettings, "Assets/AppVisualizationSettings.asset");
+                appConfigurationSettings = CreateInstance<AppConfigurationSettings>();
+                AssetDatabase.CreateAsset(appConfigurationSettings, "Assets/AppConfigurationSettings.asset");
             }
 
 
@@ -72,7 +69,7 @@ namespace Reflectis.SDK.AppConfiguration.Editor
 
             ScrollView scrollView = root.Q<ScrollView>();
             List<Toggle> toggles = new();
-            foreach (var app in appVisualizationSettings.GetAppIdentification(appVisualizationSettings.AppAssets))
+            foreach (var app in appConfigurationSettings.GetAppIdentification(appConfigurationSettings.AppAssets))
             {
                 VisualElement appElement = appVisualTree.Instantiate();
                 appElement.Q<Label>().text = app.Item1;
@@ -91,13 +88,12 @@ namespace Reflectis.SDK.AppConfiguration.Editor
                     {
                         if (evt.newValue)
                         {
-                            Debug.Log($"Selected App: {app.Item1}, Env: {envConfig.Key}");
-                            appVisualizationSettings.SelectedConfig = envConfig.Value;
+                            appConfigurationSettings.SelectedConfig = envConfig.Value;
                             // Needed because when the SelectedConfig changes, the dataSource of the SelectedAppConfig VisualElement needs to be updated
-                            selectedAppConfigSection.dataSource = appVisualizationSettings.SelectedConfig;
+                            selectedAppConfigSection.dataSource = appConfigurationSettings.SelectedConfig;
 
-                            appVisualizationSettings.SelectedEnv = envConfig.Key;
-                            appVisualizationSettings.SelectedApp = app.Item1;
+                            appConfigurationSettings.SelectedEnv = envConfig.Key;
+                            appConfigurationSettings.SelectedApp = app.Item1;
                         }
                     });
 
@@ -107,7 +103,7 @@ namespace Reflectis.SDK.AppConfiguration.Editor
                         bindingMode = BindingMode.ToTarget
                     };
                     toggleBinding.sourceToUiConverters.AddConverter(
-                        (ref (string, string) value) => value.Item1 == appVisualizationSettings.SelectedApp && value.Item2 == appVisualizationSettings.SelectedEnv);
+                        (ref (string, string) value) => value.Item1 == appConfigurationSettings.SelectedApp && value.Item2 == appConfigurationSettings.SelectedEnv);
                     toggle.SetBinding(nameof(toggle.value), toggleBinding);
 
                     togglesContainer.Add(envElement);
@@ -115,7 +111,7 @@ namespace Reflectis.SDK.AppConfiguration.Editor
                 scrollView.Add(appElement);
             }
 
-            selectedAppConfigSection.dataSource = appVisualizationSettings.SelectedConfig;
+            selectedAppConfigSection.dataSource = appConfigurationSettings.SelectedConfig;
 
             Label appIdLabel = selectedAppConfigSection.Q<VisualElement>("AppId").Q<Label>("Value");
             appIdLabel.SetBinding(nameof(appIdLabel.text), new DataBinding()
@@ -145,21 +141,20 @@ namespace Reflectis.SDK.AppConfiguration.Editor
                 bindingMode = BindingMode.ToTarget
             });
 
-
             VisualElement buttonsContainer = root.Q<VisualElement>("ButtonsContainer");
+            buttonsContainer.dataSource = appConfigurationSettings;
 
-            buttonsContainer.dataSource = appVisualizationSettings;
-            Button configureAppButton = buttonsContainer.Q<Button>("ChangeConfigButton");
-            DataBinding configureAppButtonBinding = new()
+            Button configureTenantButton = buttonsContainer.Q<Button>("ChangeConfigButton");
+            DataBinding configureTenantButtonBinding = new()
             {
                 dataSourcePath = PropertyPath.FromName(nameof(AppConfigurationSettings.ConfigurationScript)),
                 bindingMode = BindingMode.ToTarget
             };
-            configureAppButtonBinding.sourceToUiConverters.AddConverter((ref AbstractAppConfigurator value) => value != null);
-            configureAppButton.SetBinding(nameof(Button.enabledSelf), configureAppButtonBinding);
-            configureAppButton.clicked += () =>
+            configureTenantButtonBinding.sourceToUiConverters.AddConverter((ref AbstractAppConfigurator value) => value != null);
+            configureTenantButton.SetBinding(nameof(Button.enabledSelf), configureTenantButtonBinding);
+            configureTenantButton.clicked += () =>
             {
-                appVisualizationSettings.ConfigurationScript.ConfigureApp(appVisualizationSettings.SelectedConfig);
+                appConfigurationSettings.ConfigurationScript.ConfigureApp(appConfigurationSettings.SelectedConfig);
             };
 
             Button buildButton = buttonsContainer.Q<Button>("BuildButton");
@@ -172,16 +167,26 @@ namespace Reflectis.SDK.AppConfiguration.Editor
             buildButton.SetBinding(nameof(Button.enabledSelf), buildButtonBinding);
             buildButton.clicked += () =>
             {
-                appVisualizationSettings.BuildScript.Build(appVisualizationSettings.SelectedEnv, appVisualizationSettings.SelectedConfig);
+                appConfigurationSettings.BuildScript.Build(appConfigurationSettings.SelectedEnv, appConfigurationSettings.SelectedConfig);
             };
 
-            Button configureAppButton2 = buttonsContainer.Q<Button>("ConfigureAppButton");
-
-            configureAppButton2.clicked += () =>
+            Button configureAppButton = buttonsContainer.Q<Button>("ConfigureAppButton");
+            configureAppButton.clicked += () =>
             {
                 AppConfigurationWindow.ShowWindow();
-                GetWindow<AppConfigurationWindow>().ShowAppConfigurationWindow(appVisualizationSettings.SelectedConfig);
+                GetWindow<AppConfigurationWindow>().ShowAppConfigurationWindow(appConfigurationSettings.SelectedConfig, appConfigurationSettings);
             };
+
+            foreach (var button in new List<Button>() { configureTenantButton, configureAppButton })
+            {
+                DataBinding selectedConfigBinding = new()
+                {
+                    dataSourcePath = PropertyPath.FromName(nameof(AppConfigurationSettings.SelectedConfig)),
+                    bindingMode = BindingMode.ToTarget
+                };
+                selectedConfigBinding.sourceToUiConverters.AddConverter((ref AppConfigurationSettings value) => value != null);
+                buildButton.SetBinding(nameof(Button.enabledSelf), buildButtonBinding);
+            }
 
         }
 
