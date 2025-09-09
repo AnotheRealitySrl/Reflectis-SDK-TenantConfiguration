@@ -17,10 +17,6 @@ namespace Reflectis.SDK.TenantConfiguration
         [SerializeField] private string realtimeApiUrl;
         [SerializeField] private string realtimeApiVersion;
 
-        [SerializeField] private string productName;
-        [SerializeField] private string productNameSuffix;
-        [SerializeField] private string releaseCompanyName = "";
-        [SerializeField] private string tenantNickname;
 
         [CreateProperty] public string ApplicationUrl => applicationUrl;
         public string ProfileApiUrl => profileApiUrl;
@@ -30,10 +26,6 @@ namespace Reflectis.SDK.TenantConfiguration
         public string RealtimeApiUrl => realtimeApiUrl;
         public string RealtimeApiVersion => realtimeApiVersion;
 
-        public string ProductName => productName;
-        public string ProductNameSuffix => productNameSuffix;
-        public string ReleaseCompanyName => string.IsNullOrEmpty(releaseCompanyName) ? "AnotheReality" : releaseCompanyName;
-        public string TenantNickname => tenantNickname;
 
     }
 }
