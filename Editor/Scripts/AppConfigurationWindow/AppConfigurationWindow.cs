@@ -41,7 +41,10 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
 
         private List<EditableConfigItem> editableAppConfigurationItems;
 
-        private VisualElement appConfigContainer;
+        private VisualElement appConfigContainerTyped;
+        private TextField rawTextField;
+
+        [CreateProperty] private bool isRawEditMode = false;
 
         public static AppConfigurationWindow ShowWindow()
         {
@@ -77,20 +80,69 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                 editableAppConfigurationItems.Add(new EditableConfigItem(el.Key, NormalizeJToken(el.Value)));
             }
 
-            appConfigContainer = root.Q<VisualElement>("AppPropertiesContainer");
-            appConfigContainer.Clear();
-            PopolateContainer(editableAppConfigurationItems, appConfigContainer);
+            VisualElement appConfigContainer = root.Q<VisualElement>("AppPropertiesContainer");
+            appConfigContainer.dataSource = this;
+
+
+            appConfigContainerTyped = appConfigContainer.Q<VisualElement>("AppPropertiesContainerTyped");
+            appConfigContainerTyped.Clear();
+            PopolateContainer(editableAppConfigurationItems, appConfigContainerTyped);
+
+            DataBinding appConfigContainerBinding = new()
+            {
+                dataSourcePath = PropertyPath.FromName(nameof(isRawEditMode)),
+                bindingMode = BindingMode.ToTarget
+            };
+            appConfigContainerBinding.sourceToUiConverters.AddConverter((ref bool value) =>
+            {
+                appConfigContainerTyped.style.display = value ? DisplayStyle.None : DisplayStyle.Flex;
+                return true;
+            });
+            appConfigContainerTyped.SetBinding($"{nameof(VisualElement.visible)}", appConfigContainerBinding);
+
+
+            VisualElement rawConfigContainer = appConfigContainer.Q<VisualElement>("AppPropertiesContainerRaw");
+            TextField rawTextField = rawConfigContainer.Q<TextField>();
+            rawTextField.value = customAppConfig.ToString(Formatting.Indented);
+
+            DataBinding rawConfigContainerBinding = new()
+            {
+                dataSourcePath = PropertyPath.FromName(nameof(isRawEditMode)),
+                bindingMode = BindingMode.ToTarget
+            };
+            rawConfigContainerBinding.sourceToUiConverters.AddConverter((ref bool value) =>
+            {
+                rawConfigContainer.style.display = value ? DisplayStyle.Flex : DisplayStyle.None;
+                return true;
+            });
+            rawConfigContainer.SetBinding($"{nameof(VisualElement.visible)}", rawConfigContainerBinding);
+
+
 
             Button updateAppbutton = root.Q<Button>("UpdateAppConfigurationButton");
             updateAppbutton.clicked -= OnUpdateClicked; // evita duplicazioni se riaperto
             updateAppbutton.clicked += OnUpdateClicked;
 
+            Toggle editModeClicked = root.Q<Toggle>("EditModeToggle");
+            editModeClicked.RegisterCallback<ChangeEvent<bool>>(evt =>
+            {
+                isRawEditMode = !isRawEditMode;
+            });
+
             async void OnUpdateClicked()
             {
-                // Costruisce JObject preservando i tipi primitivi
-                JObject updatedConfig = BuildUpdatedConfigJObject();
-                await tenantConfigurationSystem.UpdateAppCustomConfig(updatedConfig.ToString(Formatting.None));
-                Debug.Log($"App configuration updated successfully. New config: {updatedConfig}");
+                if (!isRawEditMode)
+                {
+                    // Costruisce JObject preservando i tipi primitivi
+                    JObject updatedConfig = BuildUpdatedConfigJObject();
+                    await tenantConfigurationSystem.UpdateAppCustomConfig(updatedConfig.ToString(Formatting.Indented));
+                    Debug.Log($"App configuration updated successfully. New config: {updatedConfig}");
+                }
+                else
+                {
+                    await tenantConfigurationSystem.UpdateAppCustomConfig(rawTextField.text.ToString());
+                }
+
             }
         }
 

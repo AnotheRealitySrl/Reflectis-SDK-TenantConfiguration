@@ -5,7 +5,12 @@
     </engine:VisualElement>
     <engine:VisualElement name="Separator" class="separator" />
     <engine:VisualElement name="AppPropertiesContainer">
-        <engine:Label text="Custom app config" name="Header" class="section-header" />
+        <engine:Label text="App configuration" name="Header" class="section-header" />
+        <engine:VisualElement name="AppPropertiesContainerTyped" style="flex-grow: 1;" />
+        <engine:VisualElement name="AppPropertiesContainerRaw">
+            <engine:TextField placeholder-text="Raw config" multiline="true" />
+        </engine:VisualElement>
+        <engine:Toggle label="Edit raw data" name="EditModeToggle" />
     </engine:VisualElement>
     <engine:VisualElement name="Separator" class="separator" />
     <engine:Button text="Update app configuration" name="UpdateAppConfigurationButton" />
