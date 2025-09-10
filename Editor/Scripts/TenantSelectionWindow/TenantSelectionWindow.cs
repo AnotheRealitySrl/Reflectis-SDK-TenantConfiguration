@@ -178,16 +178,16 @@ namespace Reflectis.SDK.AppConfiguration.Editor
                 GetWindow<AppConfigurationWindow>().ShowAppConfigurationWindow(appConfigurationSettings.SelectedConfig, appConfigurationSettings);
             };
 
-            foreach (var button in new List<Button>() { configureTenantButton, configureAppButton })
-            {
-                DataBinding selectedConfigBinding = new()
-                {
-                    dataSourcePath = PropertyPath.FromName(nameof(AppConfigurationSettings.SelectedConfig)),
-                    bindingMode = BindingMode.ToTarget
-                };
-                selectedConfigBinding.sourceToUiConverters.AddConverter((ref AppConfigurationSettings value) => value != null);
-                button.SetBinding(nameof(Button.enabledSelf), selectedConfigBinding);
-            }
+            //foreach (var button in new List<Button>() { configureTenantButton, configureAppButton })
+            //{
+            //    DataBinding selectedConfigBinding = new()
+            //    {
+            //        dataSourcePath = PropertyPath.FromName(nameof(AppConfigurationSettings.SelectedConfig)),
+            //        bindingMode = BindingMode.ToTarget
+            //    };
+            //    selectedConfigBinding.sourceToUiConverters.AddConverter((ref AppConfigurationSettings value) => value != null);
+            //    button.SetBinding(nameof(Button.enabledSelf), selectedConfigBinding);
+            //}
         }
 
 
