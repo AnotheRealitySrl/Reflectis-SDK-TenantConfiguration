@@ -141,17 +141,18 @@ namespace Reflectis.SDK.AppConfiguration.Editor
                 bindingMode = BindingMode.ToTarget
             });
 
+
             VisualElement buttonsContainer = root.Q<VisualElement>("ButtonsContainer");
             buttonsContainer.dataSource = appConfigurationSettings;
 
             Button configureTenantButton = buttonsContainer.Q<Button>("ChangeConfigButton");
-            DataBinding configureTenantButtonBinding = new()
-            {
-                dataSourcePath = PropertyPath.FromName(nameof(AppConfigurationSettings.ConfigurationScript)),
-                bindingMode = BindingMode.ToTarget
-            };
-            configureTenantButtonBinding.sourceToUiConverters.AddConverter((ref AbstractAppConfigurator value) => value != null);
-            configureTenantButton.SetBinding(nameof(Button.enabledSelf), configureTenantButtonBinding);
+            //DataBinding configureTenantButtonBinding = new()
+            //{
+            //    dataSourcePath = PropertyPath.FromName(nameof(AppConfigurationSettings.ConfigurationScript)),
+            //    bindingMode = BindingMode.ToTarget
+            //};
+            //configureTenantButtonBinding.sourceToUiConverters.AddConverter((ref AbstractAppConfigurator value) => value != null);
+            //configureTenantButton.SetBinding(nameof(Button.enabledSelf), configureTenantButtonBinding);
             configureTenantButton.clicked += () =>
             {
                 appConfigurationSettings.ConfigurationScript.ConfigureApp(appConfigurationSettings.SelectedConfig);
@@ -185,9 +186,8 @@ namespace Reflectis.SDK.AppConfiguration.Editor
                     bindingMode = BindingMode.ToTarget
                 };
                 selectedConfigBinding.sourceToUiConverters.AddConverter((ref AppConfigurationSettings value) => value != null);
-                buildButton.SetBinding(nameof(Button.enabledSelf), buildButtonBinding);
+                button.SetBinding(nameof(Button.enabledSelf), selectedConfigBinding);
             }
-
         }
 
 
