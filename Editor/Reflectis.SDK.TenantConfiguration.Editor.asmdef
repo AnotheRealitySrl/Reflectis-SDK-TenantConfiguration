@@ -1,0 +1,19 @@
+{
+    "name": "Reflectis.SDK.TenantConfiguration.Editor",
+    "rootNamespace": "Reflectis.SDK.TenantConfiguration.Editor",
+    "references": [
+        "GUID:ab59f74e483e1ee4595bfefea56493f2",
+        "GUID:fbebb77141d815e478836eb96f260865"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
