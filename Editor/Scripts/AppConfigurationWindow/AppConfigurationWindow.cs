@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 using Reflectis.SDK.Core.ApiSystem;
+using Reflectis.SDK.Http;
 
 using System;
 using System.Collections.Generic;
@@ -131,16 +132,15 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
 
             async void OnUpdateClicked()
             {
-                if (!isRawEditMode)
+                string updatedConfig = !isRawEditMode ? BuildUpdatedConfigJObject().ToString(Formatting.Indented) : rawTextField.text;
+                ApiResponse appCustomConfigUpdateReq = await tenantConfigurationSystem.UpdateAppCustomConfig(updatedConfig);
+                if (appCustomConfigUpdateReq.IsSuccess)
                 {
-                    // Costruisce JObject preservando i tipi primitivi
-                    JObject updatedConfig = BuildUpdatedConfigJObject();
-                    await tenantConfigurationSystem.UpdateAppCustomConfig(updatedConfig.ToString(Formatting.Indented));
                     Debug.Log($"App configuration updated successfully. New config: {updatedConfig}");
                 }
                 else
                 {
-                    await tenantConfigurationSystem.UpdateAppCustomConfig(rawTextField.text.ToString());
+                    Debug.LogError($"Failed to update app configuration: {appCustomConfigUpdateReq.StatusCode} {appCustomConfigUpdateReq.ReasonPhrase}");
                 }
 
             }

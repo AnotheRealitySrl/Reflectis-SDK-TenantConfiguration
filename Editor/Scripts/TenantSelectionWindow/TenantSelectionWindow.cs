@@ -13,7 +13,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Reflectis.SDK.AppConfiguration.Editor
+namespace Reflectis.SDK.TenantConfiguration.Editor
 {
     public class TenantSelectionWindow : EditorWindow
     {
@@ -24,15 +24,15 @@ namespace Reflectis.SDK.AppConfiguration.Editor
 
         private AppConfigurationSettings appConfigurationSettings;
 
-        private const string settings_folder_path = "Assets/Editor/AppConfiguration";
-        private const string settings_configuration_path = "AppConfigurationSettings.asset";
+        private const string settings_folder_path = "Assets/Editor/TenantConfiguration";
+        private const string settings_configuration_path = "TenantConfiguration.asset";
 
 
-        [MenuItem("Reflectis/SDK/AppConfiguration/Show available apps")]
+        [MenuItem("Reflectis/SDK/TenantConfiguration/Show available tenants")]
         public static void ShowExample()
         {
             TenantSelectionWindow wnd = GetWindow<TenantSelectionWindow>();
-            wnd.titleContent = new GUIContent("Show available apps");
+            wnd.titleContent = new GUIContent("Show available tenants");
         }
 
         public void CreateGUI()
@@ -61,7 +61,7 @@ namespace Reflectis.SDK.AppConfiguration.Editor
             if (!appConfigurationSettings)
             {
                 appConfigurationSettings = CreateInstance<AppConfigurationSettings>();
-                AssetDatabase.CreateAsset(appConfigurationSettings, "Assets/AppConfigurationSettings.asset");
+                AssetDatabase.CreateAsset(appConfigurationSettings, "Assets/TenantConfigurationSettings.asset");
             }
 
 
