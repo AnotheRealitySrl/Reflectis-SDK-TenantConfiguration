@@ -75,10 +75,13 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             JObject customAppConfig = (await tenantConfigurationSystem.GetAppCustomConfig()).Content;
 
             editableAppConfigurationItems = new List<EditableConfigItem>();
-            foreach (var el in customAppConfig)
+            if (customAppConfig != null)
             {
-                // Normalizza i JValue in primitivi .NET per evitare che vengano trattati come stringhe
-                editableAppConfigurationItems.Add(new EditableConfigItem(el.Key, NormalizeJToken(el.Value)));
+                foreach (var el in customAppConfig)
+                {
+                    // Normalizza i JValue in primitivi .NET per evitare che vengano trattati come stringhe
+                    editableAppConfigurationItems.Add(new EditableConfigItem(el.Key, NormalizeJToken(el.Value)));
+                }
             }
 
             VisualElement appConfigContainer = root.Q<VisualElement>("AppPropertiesContainer");
@@ -104,7 +107,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
 
             VisualElement rawConfigContainer = appConfigContainer.Q<VisualElement>("AppPropertiesContainerRaw");
             TextField rawTextField = rawConfigContainer.Q<TextField>();
-            rawTextField.value = customAppConfig.ToString(Formatting.Indented);
+            rawTextField.value = customAppConfig != null ? customAppConfig.ToString(Formatting.Indented) : "";
 
             DataBinding rawConfigContainerBinding = new()
             {
