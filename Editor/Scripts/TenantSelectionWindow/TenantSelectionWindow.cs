@@ -1,6 +1,5 @@
 using Reflectis.SDK.Core.ApiSystem;
 using Reflectis.SDK.Core.Utilities;
-using Reflectis.SDK.TenantConfiguration.Editor;
 
 using System.Collections.Generic;
 using System.IO;
@@ -44,8 +43,14 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             VisualElement labelFromUXML = m_VisualTreeAsset.Instantiate();
             root.Add(labelFromUXML);
 
-            string appConfigurationSettingsAssetGuid = AssetDatabase.FindAssets("t:" + typeof(AppConfigurationSettings).Name).ToList().FirstOrDefault();
-            appConfigurationSettings = AssetDatabase.LoadAssetAtPath<AppConfigurationSettings>(AssetDatabase.GUIDToAssetPath(appConfigurationSettingsAssetGuid));
+            List<string> tenantConfigurationSettingsAssetGuid = AssetDatabase.FindAssets("t:" + typeof(AppConfigurationSettings).Name).ToList();
+            List<AppConfigurationSettings> appConfigurationSettingsList = new();
+            foreach (var item in tenantConfigurationSettingsAssetGuid)
+            {
+                appConfigurationSettingsList.Add(AssetDatabase.LoadAssetAtPath<AppConfigurationSettings>(AssetDatabase.GUIDToAssetPath(item)));
+            }
+            appConfigurationSettings = appConfigurationSettingsList.FirstOrDefault(x => x.IsSelected);
+
 
             if (appConfigurationSettings == null)
             {

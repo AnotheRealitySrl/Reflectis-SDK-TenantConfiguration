@@ -13,10 +13,16 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
     [CreateAssetMenu(fileName = "AppConfigurationSettings", menuName = "Reflectis/SDK-TenantConfiguration/AppConfigurationSettings")]
     public class AppConfigurationSettings : ScriptableObject
     {
+        [SerializeField] private string targetPlatform;
+        [SerializeField] private bool isSelected = true;
+
         [SerializeField] private List<TextAsset> appAssets = new();
 
         [SerializeField] private AbstractAppConfigurator configurationScript;
         [SerializeField] private BuildScriptBase buildScript;
+
+        public string TargetPlatform => targetPlatform;
+        public bool IsSelected { get => isSelected; set => isSelected = value; }
 
         public List<TextAsset> AppAssets => appAssets;
 
