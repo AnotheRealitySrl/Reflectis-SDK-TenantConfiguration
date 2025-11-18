@@ -16,6 +16,8 @@ namespace Reflectis.SDK.TenantConfiguration
         [SerializeField] private string applicationApiVersion;
         [SerializeField] private string realtimeApiUrl;
         [SerializeField] private string realtimeApiVersion;
+        [SerializeField] private string aiApiUrl;
+        [SerializeField] private string aiApiVersion;
 
 
         [CreateProperty] public string ApplicationUrl => applicationUrl;
@@ -25,6 +27,8 @@ namespace Reflectis.SDK.TenantConfiguration
         public string ApplicationApiVersion => applicationApiVersion;
         public string RealtimeApiUrl => realtimeApiUrl;
         public string RealtimeApiVersion => realtimeApiVersion;
+        public string AIApiUrl => aiApiUrl;
+        public string AIApiVersion => aiApiVersion;
 
 
     }
