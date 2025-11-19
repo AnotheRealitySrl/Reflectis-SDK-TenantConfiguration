@@ -158,9 +158,9 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             //};
             //configureTenantButtonBinding.sourceToUiConverters.AddConverter((ref AbstractAppConfigurator value) => value != null);
             //configureTenantButton.SetBinding(nameof(Button.enabledSelf), configureTenantButtonBinding);
-            configureTenantButton.clicked += () =>
+            configureTenantButton.clicked += async () =>
             {
-                appConfigurationSettings.ConfigurationScript.ConfigureApp(appConfigurationSettings.SelectedConfig);
+                await appConfigurationSettings.ConfigurationScript.ConfigureApp(appConfigurationSettings.SelectedConfig);
             };
 
             Button buildButton = buttonsContainer.Q<Button>("BuildButton");
