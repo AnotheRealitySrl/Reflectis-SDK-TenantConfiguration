@@ -1,6 +1,11 @@
 <engine:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="project://database/Packages/com.anotherealitysrl.reflectis-sdk-tenantconfiguration/Editor/Scripts/TenantSelectionWindow/TenantSelectionWindow.uss?fileID=7433441132597879392&amp;guid=fa7bf02bcbe45f048842628c0255d6ac&amp;type=3#TenantSelectionWindow" />
     <engine:VisualElement style="flex-grow: 1; margin-top: 10px; margin-right: 10px; margin-bottom: 10px; margin-left: 10px;">
+        <engine:VisualElement name="AppConfigurationSettingsSection" style="flex-shrink: 0; margin-bottom: 6px;">
+            <engine:Label text="Configuration source" style="-unity-font-style: bold; margin-bottom: 2px;" />
+            <editor:ObjectField name="AppConfigurationSettingsField" label="App Configuration Settings" allow-scene-objects="false" />
+        </engine:VisualElement>
+        <engine:VisualElement name="Separator" class="separator" />
         <engine:Label text="Login" name="Header" style="-unity-font-style: bold; font-size: 16px; -unity-text-align: upper-center; margin-bottom: 6px;" />
         <engine:VisualElement name="Separator" class="separator" />
         <engine:ScrollView name="AppScrollView" style="flex-direction: row; margin-top: 5px; margin-bottom: 5px;">

@@ -11,6 +11,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 
 using UnityEditor;
+using UnityEditor.UIElements;
 
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -61,6 +62,19 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             root.Add(labelFromUXML);
 
             appConfigurationSettings = FindOrCreateAppConfigurationSettings();
+
+            // Show the AppConfigurationSettings SO in an ObjectField
+            ObjectField appConfigSettingsField = root.Q<ObjectField>("AppConfigurationSettingsField");
+            appConfigSettingsField.objectType = typeof(AppConfigurationSettings);
+            appConfigSettingsField.value = appConfigurationSettings;
+            appConfigSettingsField.RegisterValueChangedCallback(evt =>
+            {
+                if (evt.newValue is AppConfigurationSettings newSettings && newSettings != null)
+                {
+                    Selection.activeObject = newSettings;
+                    EditorGUIUtility.PingObject(newSettings);
+                }
+            });
 
             // Populate tenant/env list
             ScrollView scrollView = root.Q<ScrollView>("AppScrollView");
