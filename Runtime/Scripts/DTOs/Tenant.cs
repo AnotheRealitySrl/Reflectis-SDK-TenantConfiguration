@@ -24,12 +24,14 @@ namespace Reflectis.SDK.TenantConfiguration
         [SerializeField] private string label;
         [SerializeField] private string note;
         [SerializeField] private TenantStatus status;
+        [SerializeField] private Env env;
         [SerializeField] private TenantConfig config;
 
         public int Id => id;
         public string Label => label;
         public string Note => note;
         public TenantStatus Status => status;
+        public Env Env => env;
         public TenantConfig Config => config;
     }
 

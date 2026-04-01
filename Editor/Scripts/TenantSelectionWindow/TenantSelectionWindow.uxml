@@ -33,13 +33,8 @@
         <engine:VisualElement name="ButtonsContainer" style="flex-direction: row; align-items: center; justify-content: center; flex-shrink: 0;">
             <engine:Button text="Switch tenant" name="ChangeConfigButton" />
             <engine:Button text="Build with selected config" name="BuildButton" />
-            <engine:Button text="Configure app" name="ConfigureAppButton" />
-        </engine:VisualElement>
-        <engine:VisualElement name="Separator" class="separator" />
-        <engine:VisualElement name="LoginSection" style="flex-direction: row; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 5px;">
-            <engine:Button text="Login" name="LoginButton" />
-            <engine:Button text="Logout" name="LogoutButton" />
-            <engine:Label text="Not logged in" name="LoginStatusLabel" style="margin-left: 10px;" />
+            <engine:Button text="Configure app" name="ConfigureAppButton" style="display: none;" />
+            <engine:Button text="Login" name="OpenLoginButton" />
         </engine:VisualElement>
     </engine:VisualElement>
 </engine:UXML>
