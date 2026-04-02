@@ -9,8 +9,8 @@ using UnityEditor;
 namespace Reflectis.SDK.TenantConfiguration.Editor
 {
     /// <summary>
-    /// Stores editor login state using SessionState.
-    /// Persists between domain reloads, resets when editor closes.
+    /// Stores editor login state using both SessionState (for runtime) and EditorPrefs (for persistence across editor restarts).
+    /// On domain reload, restores from EditorPrefs if SessionState is empty.
     /// </summary>
     public static class EditorLoginState
     {
@@ -21,17 +21,57 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
         private const string LOGGED_IN_APP_KEY = "Reflectis_EditorLogin_App";
         private const string LOGGED_IN_ENV_KEY = "Reflectis_EditorLogin_Env";
 
+        // Helper methods to read/write with EditorPrefs as persistent backing store
+        private static string GetString(string key, string defaultValue = "")
+        {
+            string value = SessionState.GetString(key, "");
+            if (string.IsNullOrEmpty(value))
+            {
+                value = EditorPrefs.GetString(key, defaultValue);
+                if (!string.IsNullOrEmpty(value))
+                    SessionState.SetString(key, value);
+            }
+            return value;
+        }
+
+        private static void SetString(string key, string value)
+        {
+            SessionState.SetString(key, value);
+            EditorPrefs.SetString(key, value);
+        }
+
+        private static bool GetBool(string key, bool defaultValue = false)
+        {
+            // SessionState doesn't distinguish "not set" from "false", so check EditorPrefs first on cold start
+            string marker = SessionState.GetString(key + "_set", "");
+            if (string.IsNullOrEmpty(marker))
+            {
+                bool value = EditorPrefs.GetBool(key, defaultValue);
+                SessionState.SetBool(key, value);
+                SessionState.SetString(key + "_set", "1");
+                return value;
+            }
+            return SessionState.GetBool(key, defaultValue);
+        }
+
+        private static void SetBool(string key, bool value)
+        {
+            SessionState.SetBool(key, value);
+            SessionState.SetString(key + "_set", "1");
+            EditorPrefs.SetBool(key, value);
+        }
+
         public static string BearerToken
         {
-            get => SessionState.GetString(TOKEN_KEY, "");
-            private set => SessionState.SetString(TOKEN_KEY, value);
+            get => GetString(TOKEN_KEY);
+            private set => SetString(TOKEN_KEY, value);
         }
 
         public static Tenant CurrentTenant
         {
             get
             {
-                string json = SessionState.GetString(TENANT_KEY, "");
+                string json = GetString(TENANT_KEY);
                 if (string.IsNullOrEmpty(json)) return null;
                 try
                 {
@@ -44,32 +84,32 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             }
             private set
             {
-                SessionState.SetString(TENANT_KEY, value != null ? JsonConvert.SerializeObject(value) : "");
+                SetString(TENANT_KEY, value != null ? JsonConvert.SerializeObject(value) : "");
             }
         }
 
         public static string Username
         {
-            get => SessionState.GetString(USERNAME_KEY, "");
-            private set => SessionState.SetString(USERNAME_KEY, value ?? "");
+            get => GetString(USERNAME_KEY);
+            private set => SetString(USERNAME_KEY, value ?? "");
         }
 
         public static bool IsTenantManager
         {
-            get => SessionState.GetBool(IS_TENANT_MANAGER_KEY, false);
-            private set => SessionState.SetBool(IS_TENANT_MANAGER_KEY, value);
+            get => GetBool(IS_TENANT_MANAGER_KEY);
+            private set => SetBool(IS_TENANT_MANAGER_KEY, value);
         }
 
         public static string LoggedInApp
         {
-            get => SessionState.GetString(LOGGED_IN_APP_KEY, "");
-            private set => SessionState.SetString(LOGGED_IN_APP_KEY, value ?? "");
+            get => GetString(LOGGED_IN_APP_KEY);
+            private set => SetString(LOGGED_IN_APP_KEY, value ?? "");
         }
 
         public static string LoggedInEnv
         {
-            get => SessionState.GetString(LOGGED_IN_ENV_KEY, "");
-            private set => SessionState.SetString(LOGGED_IN_ENV_KEY, value ?? "");
+            get => GetString(LOGGED_IN_ENV_KEY);
+            private set => SetString(LOGGED_IN_ENV_KEY, value ?? "");
         }
 
         public static bool IsLoggedIn => !string.IsNullOrEmpty(BearerToken);
