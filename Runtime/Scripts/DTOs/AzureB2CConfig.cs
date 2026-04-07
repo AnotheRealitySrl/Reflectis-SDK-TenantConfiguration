@@ -44,10 +44,10 @@ namespace Reflectis.SDK.TenantConfiguration
                 return null;
             }
 
-            JToken b2cToken = customConfig["azureB2C"];
+            JToken b2cToken = customConfig["authenticationData"];
             if (b2cToken == null)
             {
-                Debug.LogError("[AzureB2CConfig] 'azureB2C' section not found in custom config");
+                Debug.LogError("[AzureB2CConfig] 'authenticationData' section not found in custom config");
                 return null;
             }
 
