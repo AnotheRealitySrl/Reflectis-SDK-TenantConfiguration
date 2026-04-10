@@ -230,40 +230,68 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                 }
 
                 Tenant tenant = tenantResp.Content;
-                Debug.Log($"[LoginWindow] Tenant: {tenant.Label}, ApplicationApiUrl: {tenant.Config.ApplicationApiUrl}, ProfileApiUrl: {tenant.Config.ProfileApiUrl}");
 
-                // 2. Get custom config for B2C params
-                ApiResponse<Newtonsoft.Json.Linq.JObject> customConfigResp = await TenantConfigurationApi.GetAppCustomConfig(selectedConfig);
-                if (!customConfigResp.IsSuccess)
-                {
-                    Debug.LogError($"[LoginWindow] Failed to get app custom config: {customConfigResp.ReasonPhrase}");
-                    loginStatusLabel.text = "Login failed (custom config)";
-                    return;
-                }
-
-                AzureB2CConfig b2cConfig = AzureB2CConfig.FromAppCustomConfig(customConfigResp.Content);
+                // 2. Read auth config from tenant configuration (centralized)
+                //    Falls back to legacy custom config if tenant authConfig is not populated yet
+                AzureB2CConfig b2cConfig = tenant.Config.AuthConfig;
                 if (b2cConfig == null)
                 {
-                    Debug.LogError("[LoginWindow] Failed to parse Azure B2C config from custom config.");
-                    loginStatusLabel.text = "Login failed (B2C config)";
-                    return;
+                    ApiResponse<Newtonsoft.Json.Linq.JObject> customConfigResp = await TenantConfigurationApi.GetAppCustomConfig(selectedConfig);
+                    if (customConfigResp.IsSuccess)
+                    {
+                        b2cConfig = AzureB2CConfig.FromAppCustomConfig(customConfigResp.Content);
+                    }
                 }
 
-                if (string.IsNullOrEmpty(b2cConfig.Tenant) || string.IsNullOrEmpty(b2cConfig.Policy))
+                if (b2cConfig == null)
                 {
-                    Debug.LogError($"[LoginWindow] Invalid B2C config — Tenant: '{b2cConfig.Tenant}', Policy: '{b2cConfig.Policy}'.");
-                    loginStatusLabel.text = "Login failed (B2C config invalid)";
+                    Debug.LogError("[LoginWindow] Failed to get auth config from tenant or custom config.");
+                    loginStatusLabel.text = "Login failed (auth config)";
                     return;
                 }
 
-                // 3. clientId = AppIdentification.Credential.AppId
+                // 3. Validate config based on auth type
+                if (b2cConfig.IsEntraId)
+                {
+                    if (string.IsNullOrEmpty(b2cConfig.Tenant))
+                    {
+                        Debug.LogError($"[LoginWindow] Invalid Entra ID config — Tenant (tenant ID) is empty.");
+                        loginStatusLabel.text = "Login failed (Entra ID config invalid)";
+                        return;
+                    }
+                }
+                else if (b2cConfig.IsB2C)
+                {
+                    if (string.IsNullOrEmpty(b2cConfig.Tenant) || string.IsNullOrEmpty(b2cConfig.Policy))
+                    {
+                        Debug.LogError($"[LoginWindow] Invalid B2C config — Tenant: '{b2cConfig.Tenant}', Policy: '{b2cConfig.Policy}'.");
+                        loginStatusLabel.text = "Login failed (B2C config invalid)";
+                        return;
+                    }
+                }
+                else
+                {
+                    Debug.LogError($"[LoginWindow] Unrecognized auth policy: '{b2cConfig.Policy}'. Expected 'EntraID' or a value starting with 'B2C_'.");
+                    loginStatusLabel.text = "Login failed (unknown auth policy)";
+                    return;
+                }
+
+                // 4. clientId = AppIdentification.Credential.AppId
                 string clientId = selectedConfig.Credential.AppId.ToString();
 
-                // 4. Initialize Azure auth
+                // 5. Initialize Azure auth (reset to ensure clean state)
                 loginStatusLabel.text = "Logging in...";
-                AzureAuthService.Init(clientId, b2cConfig.Tenant, b2cConfig.Policy, b2cConfig.RedirectUri);
+                AzureAuthService.Reset();
+                if (b2cConfig.IsEntraId)
+                {
+                    AzureAuthService.InitEntraId(clientId, b2cConfig.Tenant, b2cConfig.RedirectUri);
+                }
+                else
+                {
+                    AzureAuthService.Init(clientId, b2cConfig.Tenant, b2cConfig.Policy, b2cConfig.RedirectUri);
+                }
 
-                // 5. Build scopes
+                // 6. Build scopes
                 string[] scopes = new[]
                 {
                     "openid",
@@ -271,10 +299,10 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                     $"https://{b2cConfig.Tenant}.onmicrosoft.com/{b2cConfig.ProfileApiId}/access"
                 };
 
-                // 6. Interactive login
+                // 7. Interactive login
                 (string accessToken, string username) = await AzureAuthService.LoginInteractive(scopes);
 
-                // 7. Get tokens from profile API
+                // 8. Get tokens from profile API
                 loginStatusLabel.text = "Getting tokens...";
                 string tokensJson = await AzureAuthService.GetUserDataAsync(tenant.Config.ProfileApiUrl, accessToken);
                 if (string.IsNullOrEmpty(tokensJson))
@@ -317,12 +345,10 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
 
                 // 10. Configure API systems for the selected tenant (same as "Switch tenant")
                 loginStatusLabel.text = "Configuring API systems...";
-                Debug.Log($"[LoginWindow] Tenant config URLs — ProfileApi: {tenant.Config.ProfileApiUrl}, ApplicationApi: {tenant.Config.ApplicationApiUrl}, ApplicationUrl: {tenant.Config.ApplicationUrl}, RealtimeApi: {tenant.Config.RealtimeApiUrl}, AiApi: {tenant.Config.AIApiUrl}");
-                Debug.Log($"[LoginWindow] Selected config — ApiBaseUrl: {selectedConfig.ApiBaseUrl}, AppId: {selectedConfig.Credential.AppId}");
+                // 10. Configure API systems for the selected tenant
                 if (appConfigurationSettings.ConfigurationScript != null)
                 {
                     await appConfigurationSettings.ConfigurationScript.ConfigureApp(selectedConfig);
-                    Debug.Log("[LoginWindow] API systems configured for selected tenant.");
                 }
 
                 // 11. Store login state

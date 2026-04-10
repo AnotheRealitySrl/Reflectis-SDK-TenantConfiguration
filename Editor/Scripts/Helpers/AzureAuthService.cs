@@ -12,8 +12,8 @@ using UnityEngine;
 namespace Reflectis.SDK.TenantConfiguration.Editor
 {
     /// <summary>
-    /// Azure B2C authentication service using MSAL.
-    /// Handles interactive login and token acquisition.
+    /// Azure authentication service using MSAL.
+    /// Handles interactive login and token acquisition for both B2C and Entra ID.
     /// </summary>
     public static class AzureAuthService
     {
@@ -21,6 +21,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
         private static string _currentClientId;
         private static string _currentTenant;
         private static string _currentPolicy;
+        private static string _currentAuthType;
 
         private static string _currentRedirectUri;
 
@@ -35,6 +36,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
         {
             // Re-initialize if parameters changed
             if (_pca != null
+                && _currentAuthType == "B2C"
                 && _currentClientId == clientId
                 && _currentTenant == tenant
                 && _currentPolicy == policy
@@ -46,15 +48,46 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             _currentClientId = clientId;
             _currentTenant = tenant;
             _currentPolicy = policy;
+            _currentAuthType = "B2C";
             _currentRedirectUri = redirectUri;
 
             string authority = $"https://{tenant}.b2clogin.com/tfp/{tenant}.onmicrosoft.com/{policy}";
 
-            Debug.Log($"[AzureAuthService] Initializing MSAL — authority: {authority}, redirectUri: {redirectUri}, clientId: {clientId}");
-
             _pca = PublicClientApplicationBuilder
                 .Create(clientId)
                 .WithB2CAuthority(authority)
+                .WithRedirectUri(redirectUri)
+                .Build();
+        }
+
+        /// <summary>
+        /// Initialize the MSAL client for Microsoft Entra ID authentication.
+        /// </summary>
+        /// <param name="tenantId">
+        /// The Entra ID tenant identifier (GUID or domain, e.g. "contoso.onmicrosoft.com").
+        /// </param>
+        public static void InitEntraId(string clientId, string tenantId, string redirectUri)
+        {
+            if (_pca != null
+                && _currentAuthType == "EntraID"
+                && _currentClientId == clientId
+                && _currentTenant == tenantId
+                && _currentRedirectUri == redirectUri)
+            {
+                return;
+            }
+
+            _currentClientId = clientId;
+            _currentTenant = tenantId;
+            _currentPolicy = null;
+            _currentAuthType = "EntraID";
+            _currentRedirectUri = redirectUri;
+
+            string authority = $"https://login.microsoftonline.com/{tenantId}";
+
+            _pca = PublicClientApplicationBuilder
+                .Create(clientId)
+                .WithAuthority(authority)
                 .WithRedirectUri(redirectUri)
                 .Build();
         }
@@ -68,6 +101,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             _currentClientId = null;
             _currentTenant = null;
             _currentPolicy = null;
+            _currentAuthType = null;
             _currentRedirectUri = null;
         }
 
@@ -89,9 +123,22 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                 try
                 {
                     var accounts = await _pca.GetAccountsAsync();
-                    result = await _pca.AcquireTokenSilent(scopes, accounts.FirstOrDefault())
-                                      .ExecuteAsync();
-                    Debug.Log("Token ottenuto in modo silenzioso (refresh riuscito)");
+                    var firstAccount = accounts.FirstOrDefault();
+                    if (firstAccount != null)
+                    {
+                        result = await _pca.AcquireTokenSilent(scopes, firstAccount)
+                                          .ExecuteAsync();
+
+                        // If silent returned no access token (cached ID-only token), force interactive
+                        if (string.IsNullOrEmpty(result.AccessToken))
+                        {
+                            throw new MsalUiRequiredException("no_access_token", "Silent token has no access token");
+                        }
+                    }
+                    else
+                    {
+                        throw new MsalUiRequiredException("no_account", "No cached account found");
+                    }
                 }
                 catch (MsalUiRequiredException)
                 {
@@ -102,7 +149,6 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                             { "nonce", Guid.NewGuid().ToString() }
                         })
                         .ExecuteAsync();
-                    Debug.Log("Login interattivo completato");
                 }
             }
             catch (MsalException ex)
@@ -111,15 +157,15 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                 throw;
             }
 
-            if (result.ExpiresOn <= DateTimeOffset.Now.AddMinutes(5))
+            if (!string.IsNullOrEmpty(result.AccessToken) && result.ExpiresOn <= DateTimeOffset.Now.AddMinutes(5))
             {
-                Debug.Log("Token quasi scaduto, rinnovo in corso...");
                 result = await _pca.AcquireTokenSilent(scopes, result.Account).ExecuteAsync();
-                Debug.Log("Token rinnovato automaticamente!");
             }
 
-            // Prefer the "name" claim from the ID token, fall back to account username (email)
+            // Prefer the "name" claim from the ID token, fall back to account username (email).
+            // Entra ID tokens commonly use "preferred_username" instead of "name".
             string username = result.ClaimsPrincipal?.FindFirst("name")?.Value
+                           ?? result.ClaimsPrincipal?.FindFirst("preferred_username")?.Value
                            ?? result.ClaimsPrincipal?.FindFirst("given_name")?.Value
                            ?? result.Account.Username;
 
@@ -138,7 +184,6 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                 apiBaseUrl += "/";
 
             string apiUrl = $"{apiBaseUrl}my/tokens";
-            Debug.Log($"[AzureAuthService] Calling tokens endpoint: {apiUrl}");
 
             // Use a per-request HttpRequestMessage to avoid mutating shared DefaultRequestHeaders
             using var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
@@ -163,9 +208,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                 return null;
             }
 
-            string json = await response.Content.ReadAsStringAsync();
-            Debug.Log($"[AzureAuthService] Tokens response: {json}");
-            return json;
+            return await response.Content.ReadAsStringAsync();
         }
     }
 }

@@ -9,7 +9,7 @@ namespace Reflectis.SDK.TenantConfiguration
     /// <summary>
     /// Azure B2C authentication configuration extracted from app custom config.
     /// </summary>
-    [Serializable]
+    [Serializable, Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.Fields)]
     public class AzureB2CConfig
     {
         // No port = MSAL picks a random available port (RFC 8252 loopback).
@@ -17,20 +17,30 @@ namespace Reflectis.SDK.TenantConfiguration
         // Register "http://localhost" (no port) in Azure B2C → Authentication → Mobile and desktop applications.
         private const string DefaultRedirectUri = "http://localhost";
 
-        [SerializeField] private string tenant;
+        [SerializeField] private string externalIdTenant;
         [SerializeField] private string policy;
         [SerializeField] private string profileApiId;
         [SerializeField] private string redirectUri;
 
-        public string Tenant { get => tenant; set => tenant = value; }
+        public string Tenant { get => externalIdTenant; set => externalIdTenant = value; }
         public string Policy { get => policy; set => policy = value; }
         public string ProfileApiId { get => profileApiId; set => profileApiId = value; }
 
         /// <summary>
-        /// The redirect URI registered in Azure B2C for the editor/desktop client.
-        /// Falls back to <c>http://localhost:10717/</c> if not specified in the config.
+        /// The redirect URI registered in Azure for the editor/desktop client.
+        /// Falls back to <c>http://localhost</c> if not specified in the config.
         /// </summary>
         public string RedirectUri => string.IsNullOrEmpty(redirectUri) ? DefaultRedirectUri : redirectUri;
+
+        /// <summary>
+        /// True when the policy field equals "EntraID" (case-insensitive), indicating Microsoft Entra ID authentication.
+        /// </summary>
+        public bool IsEntraId => string.Equals(policy, "EntraID", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// True when the policy field starts with "B2C_" (case-insensitive), indicating Azure B2C authentication.
+        /// </summary>
+        public bool IsB2C => policy != null && policy.StartsWith("B2C_", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>
         /// Extracts AzureB2CConfig from the app custom config JObject.
@@ -53,7 +63,7 @@ namespace Reflectis.SDK.TenantConfiguration
 
             return new AzureB2CConfig
             {
-                tenant = b2cToken["tenant"]?.ToString(),
+                externalIdTenant = b2cToken["tenant"]?.ToString(),
                 policy = b2cToken["policy"]?.ToString(),
                 profileApiId = b2cToken["profileApiId"]?.ToString(),
                 redirectUri = b2cToken["redirectUri"]?.ToString()

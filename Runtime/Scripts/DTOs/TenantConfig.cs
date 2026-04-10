@@ -18,6 +18,7 @@ namespace Reflectis.SDK.TenantConfiguration
         [SerializeField] private string realtimeApiVersion;
         [SerializeField] private string aiApiUrl;
         [SerializeField] private string aiApiVersion;
+        [SerializeField] private AzureB2CConfig authConfig;
 
 
         [CreateProperty] public string ApplicationUrl => applicationUrl;
@@ -30,6 +31,11 @@ namespace Reflectis.SDK.TenantConfiguration
         public string AIApiUrl => aiApiUrl;
         public string AIApiVersion => aiApiVersion;
 
+        /// <summary>
+        /// Authentication configuration (B2C or Entra ID) from the tenant config.
+        /// Null if not yet populated in the tenant configuration.
+        /// </summary>
+        public AzureB2CConfig AuthConfig => authConfig;
 
     }
 }
