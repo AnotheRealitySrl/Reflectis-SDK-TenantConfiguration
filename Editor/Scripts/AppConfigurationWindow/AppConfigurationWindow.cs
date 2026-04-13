@@ -64,15 +64,20 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
 
         public async void ShowAppConfigurationWindow(AppIdentification app, AppConfigurationSettings appConfigurationSettings)
         {
-            TenantConfigurationSystem tenantConfigurationSystem = appConfigurationSettings.ConfigurationScript.TenantConfigurationSystem;
-
             AppIdentification appConfig = new(app.Credential, app.ApiBaseUrl, app.ApiVersion);
-            await appConfigurationSettings.ConfigurationScript.TenantConfigurationSystem.Init(appConfig);
+
+            var tenantDataResponse = await TenantConfigurationApi.GetTenantData(appConfig);
+            if (!tenantDataResponse.IsSuccess)
+            {
+                Debug.LogError($"Failed to get tenant data: {tenantDataResponse.ReasonPhrase}");
+                return;
+            }
 
             Label appName = root.Q<VisualElement>("AppName").Q<Label>();
-            appName.text = tenantConfigurationSystem.TenantConfiguration.Label;
+            appName.text = tenantDataResponse.Content.Label;
 
-            JObject customAppConfig = (await tenantConfigurationSystem.GetAppCustomConfig()).Content;
+            var appCustomConfigResponse = await TenantConfigurationApi.GetAppCustomConfig(appConfig);
+            JObject customAppConfig = appCustomConfigResponse.IsSuccess ? appCustomConfigResponse.Content : null;
 
             editableAppConfigurationItems = new List<EditableConfigItem>();
             if (customAppConfig != null)
@@ -136,7 +141,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             async void OnUpdateClicked()
             {
                 string updatedConfig = !isRawEditMode ? BuildUpdatedConfigJObject().ToString(Formatting.Indented) : rawTextField.text;
-                ApiResponse appCustomConfigUpdateReq = await tenantConfigurationSystem.UpdateAppCustomConfig(updatedConfig);
+                ApiResponse appCustomConfigUpdateReq = await TenantConfigurationApi.UpdateAppCustomConfig(appConfig, updatedConfig);
                 if (appCustomConfigUpdateReq.IsSuccess)
                 {
                     Debug.Log($"App configuration updated successfully. New config: {updatedConfig}");
@@ -174,7 +179,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                 switch (jv.Type)
                 {
                     case JTokenType.Integer:
-                        // Usa Int64 per compatibilità JSON numerica generica
+                        // Usa Int64 per compatibilitï¿½ JSON numerica generica
                         return jv.Value<long>();
                     case JTokenType.Float:
                         return jv.Value<double>();
@@ -217,7 +222,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                     case double _:
                     case float _:
                     case decimal _:
-                        // Per semplicità, numeri floating usano un TextField (potresti creare un DoubleField separato)
+                        // Per semplicitï¿½, numeri floating usano un TextField (potresti creare un DoubleField separato)
                         visualElement = CreateTextFieldItem(editableItem);
                         break;
                     case bool _:

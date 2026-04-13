@@ -1,3 +1,5 @@
+using Newtonsoft.Json.Linq;
+
 using Reflectis.SDK.Core.ApiSystem;
 
 using System.Collections.Generic;
@@ -21,14 +23,42 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
         [SerializeField] private AbstractAppConfigurator configurationScript;
         [SerializeField] private BuildScriptBase buildScript;
 
+        [SerializeField] private Tenant cachedTenant;
+        [SerializeField] private string cachedAppConfigJson;
+
         public string TargetPlatform => targetPlatform;
         public bool IsSelected { get => isSelected; set => isSelected = value; }
 
         public List<TextAsset> AppAssets => appAssets;
 
-        [CreateProperty] public string SelectedApp { get; set; }
-        [CreateProperty] public string SelectedEnv { get; set; }
-        [CreateProperty] public AppIdentification SelectedConfig { get; set; }
+        [SerializeField] private string selectedApp;
+        [SerializeField] private string selectedEnv;
+        [SerializeField] private AppIdentification selectedConfig;
+
+        [CreateProperty]
+        public string SelectedApp
+        {
+            get => selectedApp;
+            set { selectedApp = value; EditorUtility.SetDirty(this); }
+        }
+
+        [CreateProperty]
+        public string SelectedEnv
+        {
+            get => selectedEnv;
+            set { selectedEnv = value; EditorUtility.SetDirty(this); }
+        }
+
+        [CreateProperty]
+        public AppIdentification SelectedConfig
+        {
+            get => selectedConfig;
+            set { selectedConfig = value; EditorUtility.SetDirty(this); }
+        }
+
+        [CreateProperty] public Tenant CachedTenant { get => cachedTenant; set => cachedTenant = value; }
+        [CreateProperty] public string CachedAppConfigJson { get => cachedAppConfigJson; set => cachedAppConfigJson = value; }
+        public JObject CachedAppConfig => string.IsNullOrEmpty(cachedAppConfigJson) ? null : JObject.Parse(cachedAppConfigJson);
 
         [CreateProperty] public AbstractAppConfigurator ConfigurationScript { get => configurationScript; set => configurationScript = value; }
         [CreateProperty] public BuildScriptBase BuildScript { get => buildScript; set => buildScript = value; }

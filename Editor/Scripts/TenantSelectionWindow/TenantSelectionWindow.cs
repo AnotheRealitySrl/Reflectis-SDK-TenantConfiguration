@@ -1,8 +1,15 @@
+using Newtonsoft.Json;
+
 using Reflectis.SDK.Core.ApiSystem;
 using Reflectis.SDK.Core.Utilities;
+using Reflectis.SDK.Http;
+
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
 
 using Unity.Properties;
 
@@ -24,6 +31,11 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
         private AppConfigurationSettings appConfigurationSettings;
 
         private Button configureAppButton;
+        private Button changeConfigButton;
+        private Label loginStatusLabel;
+        private Label tenantMismatchLabel;
+        private Button loginButton;
+        private Button logoutButton;
 
         private const string settings_folder_path = "Assets/Editor/TenantConfiguration";
         private const string settings_configuration_path = "TenantConfiguration.asset";
@@ -37,16 +49,14 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
 
         public void CreateGUI()
         {
-            // Each editor window contains a root VisualElement object
             VisualElement root = rootVisualElement;
 
-            // Instantiate UXML
             VisualElement labelFromUXML = m_VisualTreeAsset.Instantiate();
             root.Add(labelFromUXML);
 
             appConfigurationSettings = FindOrCreateAppConfigurationSettings();
 
-            // Show the AppConfigurationSettings SO in an ObjectField
+            // AppConfigurationSettings ObjectField
             ObjectField appConfigSettingsField = root.Q<ObjectField>("AppConfigurationSettingsField");
             appConfigSettingsField.objectType = typeof(AppConfigurationSettings);
             appConfigSettingsField.value = appConfigurationSettings;
@@ -61,9 +71,25 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
 
             VisualElement selectedAppConfigSection = root.Q<VisualElement>("SelectedAppConfig");
 
+            // Populate tenant/env toggle list
             ScrollView scrollView = root.Q<ScrollView>();
             List<Toggle> toggles = new();
-            foreach (var app in appConfigurationSettings.GetAppIdentification(appConfigurationSettings.AppAssets))
+            var allApps = appConfigurationSettings.GetAppIdentification(appConfigurationSettings.AppAssets);
+
+            // Auto-select first tenant/env if none is currently selected
+            if (appConfigurationSettings.SelectedConfig == null && allApps.Count > 0)
+            {
+                var firstApp = allApps[0];
+                if (firstApp.Item2.Count > 0)
+                {
+                    var firstEnv = firstApp.Item2.First();
+                    appConfigurationSettings.SelectedApp = firstApp.Item1;
+                    appConfigurationSettings.SelectedEnv = firstEnv.Key;
+                    appConfigurationSettings.SelectedConfig = firstEnv.Value;
+                }
+            }
+
+            foreach (var app in allApps)
             {
                 VisualElement appElement = appVisualTree.Instantiate();
                 appElement.Q<Label>().text = app.Item1;
@@ -83,13 +109,13 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                         if (evt.newValue)
                         {
                             appConfigurationSettings.SelectedConfig = envConfig.Value;
-                            // Needed because when the SelectedConfig changes, the dataSource of the SelectedAppConfig VisualElement needs to be updated
                             selectedAppConfigSection.dataSource = appConfigurationSettings.SelectedConfig;
 
                             appConfigurationSettings.SelectedEnv = envConfig.Key;
                             appConfigurationSettings.SelectedApp = app.Item1;
 
-                            RefreshConfigureAppVisibility();
+                            RefreshButtonsVisibility();
+                            UpdateMismatchWarning();
                         }
                     });
 
@@ -107,6 +133,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                 scrollView.Add(appElement);
             }
 
+            // Selected config data bindings
             selectedAppConfigSection.dataSource = appConfigurationSettings.SelectedConfig;
 
             Label appIdLabel = selectedAppConfigSection.Q<VisualElement>("AppId").Q<Label>("Value");
@@ -137,14 +164,23 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                 bindingMode = BindingMode.ToTarget
             });
 
+            // Login section
+            tenantMismatchLabel = root.Q<Label>("TenantMismatchLabel");
+            loginStatusLabel = root.Q<Label>("LoginStatusLabel");
+            loginButton = root.Q<Button>("LoginButton");
+            logoutButton = root.Q<Button>("LogoutButton");
 
+            loginButton.clicked += OnLoginClicked;
+            logoutButton.clicked += OnLogoutClicked;
+
+            // Buttons container
             VisualElement buttonsContainer = root.Q<VisualElement>("ButtonsContainer");
             buttonsContainer.dataSource = appConfigurationSettings;
 
-            Button configureTenantButton = buttonsContainer.Q<Button>("ChangeConfigButton");
-            configureTenantButton.clicked += async () =>
+            changeConfigButton = buttonsContainer.Q<Button>("ChangeConfigButton");
+            changeConfigButton.clicked += async () =>
             {
-                await appConfigurationSettings.ConfigurationScript.ConfigureApp(appConfigurationSettings.SelectedConfig);
+                await appConfigurationSettings.ConfigurationScript.ConfigureApp(appConfigurationSettings);
             };
 
             Button buildButton = buttonsContainer.Q<Button>("BuildButton");
@@ -157,7 +193,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             buildButton.SetBinding(nameof(Button.enabledSelf), buildButtonBinding);
             buildButton.clicked += () =>
             {
-                appConfigurationSettings.BuildScript.Build(appConfigurationSettings.SelectedEnv, appConfigurationSettings.SelectedConfig);
+                appConfigurationSettings.BuildScript.Build(appConfigurationSettings.SelectedEnv, appConfigurationSettings.SelectedConfig, appConfigurationSettings);
             };
 
             configureAppButton = buttonsContainer.Q<Button>("ConfigureAppButton");
@@ -167,38 +203,257 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                 GetWindow<AppConfigurationWindow>().ShowAppConfigurationWindow(appConfigurationSettings.SelectedConfig, appConfigurationSettings);
             };
 
-            Button openLoginButton = buttonsContainer.Q<Button>("OpenLoginButton");
-            openLoginButton.clicked += () =>
-            {
-                EditorApplication.ExecuteMenuItem("Reflectis/Login");
-            };
+            // Subscribe to login state changes
+            EditorLoginState.OnLoginStateChanged += OnLoginStateChanged;
 
-            EditorLoginState.OnLoginStateChanged += RefreshConfigureAppVisibility;
-            RefreshConfigureAppVisibility();
+            // Initial UI state
+            RefreshButtonsVisibility();
+            UpdateLoginUI();
+            UpdateMismatchWarning();
         }
 
         private void OnDestroy()
         {
-            EditorLoginState.OnLoginStateChanged -= RefreshConfigureAppVisibility;
+            EditorLoginState.OnLoginStateChanged -= OnLoginStateChanged;
         }
 
-        private void RefreshConfigureAppVisibility()
+        private void OnLoginStateChanged()
         {
-            if (configureAppButton == null) return;
-
-            bool show = EditorLoginState.IsLoggedIn
-                && EditorLoginState.IsTenantManager
-                && EditorLoginState.IsLoggedInto(appConfigurationSettings.SelectedApp, appConfigurationSettings.SelectedEnv);
-
-            configureAppButton.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
+            RefreshButtonsVisibility();
+            UpdateLoginUI();
+            UpdateMismatchWarning();
         }
 
-        /// <summary>
-        /// Resolves the active AppConfigurationSettings with the following priority:
-        /// 1. First asset with IsSelected == true (original logic)
-        /// 2. First asset with empty TargetPlatform
-        /// 3. Create a new asset
-        /// </summary>
+        #region Button visibility
+
+        private void RefreshButtonsVisibility()
+        {
+            if (changeConfigButton != null)
+            {
+                bool showConfigure = appConfigurationSettings.ConfigurationScript != null;
+                changeConfigButton.style.display = showConfigure ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
+            if (configureAppButton != null)
+            {
+                bool showAppConfig = EditorLoginState.IsLoggedIn
+                    && EditorLoginState.IsTenantManager
+                    && EditorLoginState.IsLoggedInto(appConfigurationSettings.SelectedApp, appConfigurationSettings.SelectedEnv);
+
+                configureAppButton.style.display = showAppConfig ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+        }
+
+        #endregion
+
+        #region Login
+
+        private void UpdateLoginUI()
+        {
+            if (loginStatusLabel == null) return;
+
+            bool loggedIn = EditorLoginState.IsLoggedIn;
+
+            if (loggedIn)
+            {
+                string tenantLabel = EditorLoginState.CurrentTenant?.Label ?? "Unknown";
+                string username = EditorLoginState.Username;
+                string userPart = !string.IsNullOrEmpty(username) ? $" - {username}" : string.Empty;
+                string rolePart = EditorLoginState.IsTenantManager ? " [TenantManager]" : "";
+                loginStatusLabel.text = $"Logged in: {tenantLabel}{userPart}{rolePart}";
+                loginStatusLabel.style.color = new Color(0.2f, 0.8f, 0.2f);
+            }
+            else
+            {
+                loginStatusLabel.text = "Not logged in";
+                loginStatusLabel.style.color = new Color(0.8f, 0.2f, 0.2f);
+            }
+
+            if (loginButton != null)
+                loginButton.style.display = loggedIn ? DisplayStyle.None : DisplayStyle.Flex;
+            if (logoutButton != null)
+                logoutButton.style.display = loggedIn ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        private void UpdateMismatchWarning()
+        {
+            if (tenantMismatchLabel == null) return;
+
+            if (EditorLoginState.IsLoggedIn
+                && !string.IsNullOrEmpty(appConfigurationSettings.SelectedApp)
+                && !EditorLoginState.IsLoggedInto(appConfigurationSettings.SelectedApp, appConfigurationSettings.SelectedEnv))
+            {
+                tenantMismatchLabel.text = $"Warning: you are logged into {EditorLoginState.LoggedInApp}/{EditorLoginState.LoggedInEnv}. Logging in here will switch your session.";
+                tenantMismatchLabel.style.display = DisplayStyle.Flex;
+            }
+            else
+            {
+                tenantMismatchLabel.style.display = DisplayStyle.None;
+            }
+        }
+
+        private void OnLogoutClicked()
+        {
+            AzureAuthService.Reset();
+            EditorLoginState.Clear();
+            Debug.Log("[TenantSelectionWindow] Logged out.");
+        }
+
+        private async void OnLoginClicked()
+        {
+            AppIdentification selectedConfig = appConfigurationSettings.SelectedConfig;
+            string selectedApp = appConfigurationSettings.SelectedApp;
+            string selectedEnv = appConfigurationSettings.SelectedEnv;
+
+            if (selectedConfig == null)
+            {
+                Debug.LogError("[TenantSelectionWindow] No tenant configuration selected.");
+                return;
+            }
+
+            try
+            {
+                loginStatusLabel.text = "Fetching tenant data...";
+
+                // 1. Get tenant data
+                ApiResponse<Tenant> tenantResp = await TenantConfigurationApi.GetTenantData(selectedConfig);
+                if (!tenantResp.IsSuccess)
+                {
+                    Debug.LogError($"[TenantSelectionWindow] Failed to get tenant data: {tenantResp.ReasonPhrase}");
+                    loginStatusLabel.text = "Login failed (tenant data)";
+                    return;
+                }
+
+                Tenant tenant = tenantResp.Content;
+
+                // 2. Read auth config from tenant configuration
+                //    Falls back to legacy custom config if tenant authConfig is not populated yet
+                AzureB2CConfig b2cConfig = tenant.Config.AuthConfig;
+                if (b2cConfig == null)
+                {
+                    ApiResponse<Newtonsoft.Json.Linq.JObject> customConfigResp = await TenantConfigurationApi.GetAppCustomConfig(selectedConfig);
+                    if (customConfigResp.IsSuccess)
+                    {
+                        b2cConfig = AzureB2CConfig.FromAppCustomConfig(customConfigResp.Content);
+                    }
+                }
+
+                if (b2cConfig == null)
+                {
+                    Debug.LogError("[TenantSelectionWindow] Failed to get auth config from tenant or custom config.");
+                    loginStatusLabel.text = "Login failed (auth config)";
+                    return;
+                }
+
+                // 3. Validate config based on auth type
+                if (b2cConfig.IsEntraId)
+                {
+                    if (string.IsNullOrEmpty(b2cConfig.Tenant))
+                    {
+                        Debug.LogError($"[TenantSelectionWindow] Invalid Entra ID config — Tenant (tenant ID) is empty.");
+                        loginStatusLabel.text = "Login failed (Entra ID config invalid)";
+                        return;
+                    }
+                }
+                else if (b2cConfig.IsB2C)
+                {
+                    if (string.IsNullOrEmpty(b2cConfig.Tenant) || string.IsNullOrEmpty(b2cConfig.Policy))
+                    {
+                        Debug.LogError($"[TenantSelectionWindow] Invalid B2C config — Tenant: '{b2cConfig.Tenant}', Policy: '{b2cConfig.Policy}'.");
+                        loginStatusLabel.text = "Login failed (B2C config invalid)";
+                        return;
+                    }
+                }
+                else
+                {
+                    Debug.LogError($"[TenantSelectionWindow] Unrecognized auth policy: '{b2cConfig.Policy}'. Expected 'EntraID' or a value starting with 'B2C_'.");
+                    loginStatusLabel.text = "Login failed (unknown auth policy)";
+                    return;
+                }
+
+                // 4. clientId = AppIdentification.Credential.AppId
+                string clientId = selectedConfig.Credential.AppId.ToString();
+
+                // 5. Initialize Azure auth
+                loginStatusLabel.text = "Logging in...";
+                AzureAuthService.Reset();
+                if (b2cConfig.IsEntraId)
+                {
+                    AzureAuthService.InitEntraId(clientId, b2cConfig.Tenant, b2cConfig.RedirectUri);
+                }
+                else
+                {
+                    AzureAuthService.Init(clientId, b2cConfig.Tenant, b2cConfig.Policy, b2cConfig.RedirectUri);
+                }
+
+                // 6. Build scopes
+                string[] scopes = new[]
+                {
+                    "openid",
+                    "offline_access",
+                    $"https://{b2cConfig.Tenant}.onmicrosoft.com/{b2cConfig.ProfileApiId}/access"
+                };
+
+                // 7. Interactive login
+                (string accessToken, string username) = await AzureAuthService.LoginInteractive(scopes);
+
+                // 8. Get tokens from profile API
+                loginStatusLabel.text = "Getting tokens...";
+                string tokensJson = await AzureAuthService.GetUserDataAsync(tenant.Config.ProfileApiUrl, accessToken);
+                if (string.IsNullOrEmpty(tokensJson))
+                {
+                    Debug.LogError("[TenantSelectionWindow] Failed to get user tokens.");
+                    loginStatusLabel.text = "Login failed (tokens)";
+                    return;
+                }
+
+                JwtToken[] tokens = JsonConvert.DeserializeObject<JwtToken[]>(tokensJson);
+
+                // 9. Find token matching tenant label
+                string apiLabel = tenant.Label;
+                JwtToken matchingToken = tokens.FirstOrDefault(t => t.ApiLabel == apiLabel);
+                if (matchingToken == null)
+                {
+                    Debug.LogError($"[TenantSelectionWindow] No token found for API label: {apiLabel}");
+                    loginStatusLabel.text = $"Login failed (no token for {apiLabel})";
+                    return;
+                }
+
+                // 10. Check if user is TenantManager
+                bool isTenantManager = false;
+                try
+                {
+                    string applicationApiUrl = tenant.Config.ApplicationApiUrl;
+                    if (!string.IsNullOrEmpty(applicationApiUrl))
+                    {
+                        using var httpClient = new HttpClient();
+                        using var permRequest = new HttpRequestMessage(HttpMethod.Get, $"{applicationApiUrl}/tenants/app/Unity/permissions/my?api-version=2");
+                        permRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", matchingToken.Bearer);
+                        var permResponse = await httpClient.SendAsync(permRequest);
+                        isTenantManager = permResponse.IsSuccessStatusCode;
+                    }
+                }
+                catch (Exception permEx)
+                {
+                    Debug.LogWarning($"[TenantSelectionWindow] Could not check TenantManager role: {permEx.Message}");
+                }
+
+                // 11. Store login state
+                EditorLoginState.Set(matchingToken.Bearer, tenant, username, isTenantManager, selectedApp, selectedEnv);
+
+                Debug.Log($"[TenantSelectionWindow] Login successful for tenant: {tenant.Label}, user: {username}, isTenantManager: {isTenantManager}");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[TenantSelectionWindow] Login error: {ex.Message}");
+                loginStatusLabel.text = "Login failed";
+            }
+        }
+
+        #endregion
+
+        #region AppConfigurationSettings resolution
+
         private AppConfigurationSettings FindOrCreateAppConfigurationSettings()
         {
             string[] guids = AssetDatabase.FindAssets("t:" + typeof(AppConfigurationSettings).Name);
@@ -210,17 +465,14 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                     allSettings.Add(asset);
             }
 
-            // 1. Original logic: first with IsSelected == true
             AppConfigurationSettings selected = allSettings.FirstOrDefault(x => x.IsSelected);
             if (selected != null)
                 return selected;
 
-            // 2. Fallback: first with empty TargetPlatform
             AppConfigurationSettings fallback = allSettings.FirstOrDefault(x => string.IsNullOrEmpty(x.TargetPlatform));
             if (fallback != null)
                 return fallback;
 
-            // 3. Create a new one
             EnsureFolderExists(settings_folder_path);
             AppConfigurationSettings newSettings = CreateInstance<AppConfigurationSettings>();
             string assetPath = $"{settings_folder_path}/{settings_configuration_path}";
@@ -243,6 +495,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                 }
             }
         }
-    }
 
+        #endregion
+    }
 }
