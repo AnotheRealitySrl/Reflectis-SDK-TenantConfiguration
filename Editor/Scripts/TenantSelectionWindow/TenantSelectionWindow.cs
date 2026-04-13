@@ -32,6 +32,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
 
         private Button configureAppButton;
         private Button changeConfigButton;
+        private Button buildButton;
         private Label loginStatusLabel;
         private Label tenantMismatchLabel;
         private Button loginButton;
@@ -77,7 +78,11 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             var allApps = appConfigurationSettings.GetAppIdentification(appConfigurationSettings.AppAssets);
 
             // Auto-select first tenant/env if none is currently selected
-            if (appConfigurationSettings.SelectedConfig == null && allApps.Count > 0)
+            bool hasValidSelection = appConfigurationSettings.SelectedConfig != null
+                && !string.IsNullOrEmpty(appConfigurationSettings.SelectedConfig.ApiBaseUrl)
+                && !string.IsNullOrEmpty(appConfigurationSettings.SelectedApp);
+
+            if (!hasValidSelection && allApps.Count > 0)
             {
                 var firstApp = allApps[0];
                 if (firstApp.Item2.Count > 0)
@@ -183,14 +188,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                 await appConfigurationSettings.ConfigurationScript.ConfigureApp(appConfigurationSettings);
             };
 
-            Button buildButton = buttonsContainer.Q<Button>("BuildButton");
-            DataBinding buildButtonBinding = new()
-            {
-                dataSourcePath = PropertyPath.FromName(nameof(AppConfigurationSettings.BuildScript)),
-                bindingMode = BindingMode.ToTarget
-            };
-            buildButtonBinding.sourceToUiConverters.AddConverter((ref BuildScriptBase value) => value != null);
-            buildButton.SetBinding(nameof(Button.enabledSelf), buildButtonBinding);
+            buildButton = buttonsContainer.Q<Button>("BuildButton");
             buildButton.clicked += () =>
             {
                 appConfigurationSettings.BuildScript.Build(appConfigurationSettings.SelectedEnv, appConfigurationSettings.SelectedConfig, appConfigurationSettings);
@@ -232,6 +230,12 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             {
                 bool showConfigure = appConfigurationSettings.ConfigurationScript != null;
                 changeConfigButton.style.display = showConfigure ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+
+            if (buildButton != null)
+            {
+                bool showBuild = appConfigurationSettings.BuildScript != null;
+                buildButton.style.display = showBuild ? DisplayStyle.Flex : DisplayStyle.None;
             }
 
             if (configureAppButton != null)
