@@ -473,7 +473,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             if (selected != null)
                 return selected;
 
-            AppConfigurationSettings fallback = allSettings.FirstOrDefault(x => string.IsNullOrEmpty(x.TargetPlatform));
+            AppConfigurationSettings fallback = allSettings.FirstOrDefault();
             if (fallback != null)
                 return fallback;
 
