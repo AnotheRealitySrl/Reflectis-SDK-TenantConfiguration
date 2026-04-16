@@ -66,7 +66,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
         {
             AppIdentification appConfig = new(app.Credential, app.ApiBaseUrl, app.ApiVersion);
 
-            var tenantDataResponse = await TenantConfigurationApi.GetTenantData(appConfig);
+            var tenantDataResponse = await TenantConfigurationSystem.GetTenantData(appConfig);
             if (!tenantDataResponse.IsSuccess)
             {
                 Debug.LogError($"Failed to get tenant data: {tenantDataResponse.ReasonPhrase}");
@@ -76,7 +76,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             Label appName = root.Q<VisualElement>("AppName").Q<Label>();
             appName.text = tenantDataResponse.Content.Label;
 
-            var appCustomConfigResponse = await TenantConfigurationApi.GetAppCustomConfig(appConfig);
+            var appCustomConfigResponse = await TenantConfigurationSystem.GetAppCustomConfig(appConfig);
             JObject customAppConfig = appCustomConfigResponse.IsSuccess ? appCustomConfigResponse.Content : null;
 
             editableAppConfigurationItems = new List<EditableConfigItem>();
@@ -141,7 +141,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             async void OnUpdateClicked()
             {
                 string updatedConfig = !isRawEditMode ? BuildUpdatedConfigJObject().ToString(Formatting.Indented) : rawTextField.text;
-                ApiResponse appCustomConfigUpdateReq = await TenantConfigurationApi.UpdateAppCustomConfig(appConfig, updatedConfig);
+                ApiResponse appCustomConfigUpdateReq = await TenantConfigurationSystem.UpdateAppCustomConfig(appConfig, updatedConfig);
                 if (appCustomConfigUpdateReq.IsSuccess)
                 {
                     Debug.Log($"App configuration updated successfully. New config: {updatedConfig}");

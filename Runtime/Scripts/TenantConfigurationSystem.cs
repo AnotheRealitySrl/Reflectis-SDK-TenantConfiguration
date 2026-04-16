@@ -7,7 +7,7 @@ using Reflectis.SDK.Http;
 using System.Threading.Tasks;
 
 using UnityEngine;
-
+using UnityEngine.Networking;
 using static Reflectis.SDK.Core.Authentication.IAuthenticationSystem;
 
 namespace Reflectis.SDK.TenantConfiguration
@@ -18,18 +18,27 @@ namespace Reflectis.SDK.TenantConfiguration
     /// New code should use TenantConfigurationApi directly.
     /// </summary>
     [CreateAssetMenu(menuName = "AnotheReality/Systems/TenantConfigurationSystem", fileName = "TenantConfigurationSystem")]
-    public class TenantConfigurationSystem : ApiSystemBase<TenantConfigurationApi, TenantConfigurationData>
+    public class TenantConfigurationSystem : ApiSystemBase
     {
+        #region Inspector info
+        [Header("Tenant Configuration API Info")]
         [SerializeField] private bool getTenantDataOnInit = true;
+        #endregion
+
+        #region Private stuff
+        // Runtime state populated by TenantConfigurationApi
+        private Tenant tenantConfiguration;
+        private JObject appConfig;
+        #endregion
 
         #region Properties
+        public bool GetTenantDataOnInit => getTenantDataOnInit;
 
-        public Tenant TenantConfiguration => TenantConfigurationApi.TenantConfiguration;
+        public Tenant TenantConfiguration { get { return tenantConfiguration; } set { tenantConfiguration = value; } }
 
-        public JObject AppConfig => TenantConfigurationApi.AppConfig;
+        public JObject AppConfig { get { return appConfig; } set { appConfig = value; } }
 
         public AppIdentification AppIdentification => apiConfig;
-
         #endregion
 
         #region System implementation
@@ -40,13 +49,13 @@ namespace Reflectis.SDK.TenantConfiguration
 
             if (getTenantDataOnInit)
             {
-                ApiResponse<Tenant> tenantDataReq = await TenantConfigurationApi.GetTenantData(apiConfig);
+                ApiResponse<Tenant> tenantDataReq = await GetTenantData(apiConfig);
                 if (!tenantDataReq.IsSuccess)
                 {
                     Debug.LogError($"[{name}]: Failed to get tenant data: {tenantDataReq.ReasonPhrase}");
                 }
 
-                ApiResponse<JObject> appCustomConfigReq = await TenantConfigurationApi.GetAppCustomConfig(apiConfig);
+                ApiResponse<JObject> appCustomConfigReq = await GetAppCustomConfig(apiConfig);
                 if (!appCustomConfigReq.IsSuccess)
                 {
                     Debug.LogError($"[{name}]: Failed to get app data: {appCustomConfigReq.ReasonPhrase}");
@@ -60,22 +69,52 @@ namespace Reflectis.SDK.TenantConfiguration
 
         public async Task<ApiResponse<object>> GetTenantAvailability()
         {
-            return await TenantConfigurationApi.GetTenantAvailability(apiConfig);
+            return await GetTenantAvailability(apiConfig);
         }
 
-        public async Task<ApiResponse<Tenant>> GetTenantData()
+        #endregion
+
+        #region Static API access (for editor/standalone use without SM)
+        
+        public static async Task<ApiResponse<object>> GetTenantAvailability(AppIdentification apiConfig)
         {
-            return await TenantConfigurationApi.GetTenantData(apiConfig);
+            using UnityWebRequest request = ApiHelper.BuildRequest(
+                UnityWebRequest.kHttpVerbGET, "manage/apps/tenant/available", apiConfig,
+                authentication: EAuthentication.Hmac);
+            await request.SendWebRequest();
+
+            return new ApiResponse<object>(request.responseCode, request.error, request.downloadHandler.text);
         }
 
-        public async Task<ApiResponse<JObject>> GetAppCustomConfig()
+        public static async Task<ApiResponse<Tenant>> GetTenantData(AppIdentification apiConfig)
         {
-            return await TenantConfigurationApi.GetAppCustomConfig(apiConfig);
+            using UnityWebRequest request = ApiHelper.BuildRequest(
+                UnityWebRequest.kHttpVerbGET, "manage/apps/tenant", apiConfig,
+                authentication: EAuthentication.Hmac);
+            await request.SendWebRequest();
+
+            return new ApiResponse<Tenant>(request.responseCode, request.error, request.downloadHandler.text);
         }
 
-        public async Task<ApiResponse> UpdateAppCustomConfig(string config)
+        public static async Task<ApiResponse<JObject>> GetAppCustomConfig(AppIdentification apiConfig)
         {
-            return await TenantConfigurationApi.UpdateAppCustomConfig(apiConfig, config);
+            using UnityWebRequest request = ApiHelper.BuildRequest(
+                UnityWebRequest.kHttpVerbGET, "manage/apps/config/custom", apiConfig,
+                authentication: EAuthentication.Hmac);
+            await request.SendWebRequest();
+
+            return new ApiResponse<JObject>(request.responseCode, request.error, request.downloadHandler.text);
+        }
+
+        public static async Task<ApiResponse> UpdateAppCustomConfig(AppIdentification apiConfig, string config)
+        {
+            using UnityWebRequest request = ApiHelper.BuildRequest(
+                UnityWebRequest.kHttpVerbPUT, "manage/apps/config/custom", apiConfig,
+                body: config,
+                authentication: EAuthentication.Hmac);
+            await request.SendWebRequest();
+
+            return new ApiResponse(request.responseCode, request.error, request.downloadHandler.text);
         }
 
         #endregion
