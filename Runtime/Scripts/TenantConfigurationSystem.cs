@@ -18,7 +18,7 @@ namespace Reflectis.SDK.TenantConfiguration
     /// New code should use TenantConfigurationApi directly.
     /// </summary>
     [CreateAssetMenu(menuName = "AnotheReality/Systems/TenantConfigurationSystem", fileName = "TenantConfigurationSystem")]
-    public class TenantConfigurationSystem : ApiSystemBase
+    public class TenantConfigurationSystem : ApiSystemBase<TenantConfigurationApi, TenantConfigurationData>
     {
         [SerializeField] private bool getTenantDataOnInit = true;
 
