@@ -50,13 +50,21 @@ namespace Reflectis.SDK.TenantConfiguration
             if (getTenantDataOnInit)
             {
                 ApiResponse<Tenant> tenantDataReq = await GetTenantData(apiConfig);
-                if (!tenantDataReq.IsSuccess)
+                if (tenantDataReq.IsSuccess)
+                {
+                    TenantConfiguration = tenantDataReq.Content;
+                }
+                else
                 {
                     Debug.LogError($"[{name}]: Failed to get tenant data: {tenantDataReq.ReasonPhrase}");
                 }
 
                 ApiResponse<JObject> appCustomConfigReq = await GetAppCustomConfig(apiConfig);
-                if (!appCustomConfigReq.IsSuccess)
+                if (appCustomConfigReq.IsSuccess)
+                {
+                    AppConfig = appCustomConfigReq.Content;
+                }
+                else
                 {
                     Debug.LogError($"[{name}]: Failed to get app data: {appCustomConfigReq.ReasonPhrase}");
                 }
@@ -75,7 +83,7 @@ namespace Reflectis.SDK.TenantConfiguration
         #endregion
 
         #region Static API access (for editor/standalone use without SM)
-        
+
         public static async Task<ApiResponse<object>> GetTenantAvailability(AppIdentification apiConfig)
         {
             using UnityWebRequest request = ApiHelper.BuildRequest(
