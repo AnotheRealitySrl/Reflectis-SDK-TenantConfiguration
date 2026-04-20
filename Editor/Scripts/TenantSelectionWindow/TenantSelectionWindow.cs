@@ -38,6 +38,10 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
         private Button loginButton;
         private Button logoutButton;
 
+        private ScrollView scrollView;
+        private List<Toggle> toggles;
+        private VisualElement selectedAppConfigSection;
+
         private const string settings_folder_path = "Assets/Editor/TenantConfiguration";
         private const string settings_configuration_path = "TenantConfiguration.asset";
 
@@ -65,78 +69,18 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             {
                 if (evt.newValue is AppConfigurationSettings newSettings && newSettings != null)
                 {
+                    appConfigurationSettings = newSettings;
                     Selection.activeObject = newSettings;
                     EditorGUIUtility.PingObject(newSettings);
+                    RefreshAvailableApps();
                 }
             });
 
-            VisualElement selectedAppConfigSection = root.Q<VisualElement>("SelectedAppConfig");
+            selectedAppConfigSection = root.Q<VisualElement>("SelectedAppConfig");
+            scrollView = root.Q<ScrollView>();
+            toggles = new();
 
-            // Populate tenant/env toggle list
-            ScrollView scrollView = root.Q<ScrollView>();
-            List<Toggle> toggles = new();
-            var allApps = appConfigurationSettings.GetAppIdentification(appConfigurationSettings.AppAssets);
-
-            // Auto-select first tenant/env if none is currently selected
-            bool hasValidSelection = appConfigurationSettings.SelectedConfig != null
-                && !string.IsNullOrEmpty(appConfigurationSettings.SelectedConfig.ApiBaseUrl)
-                && !string.IsNullOrEmpty(appConfigurationSettings.SelectedApp);
-
-            if (!hasValidSelection && allApps.Count > 0)
-            {
-                var firstApp = allApps[0];
-                if (firstApp.Item2.Count > 0)
-                {
-                    var firstEnv = firstApp.Item2.First();
-                    appConfigurationSettings.SelectedApp = firstApp.Item1;
-                    appConfigurationSettings.SelectedEnv = firstEnv.Key;
-                    appConfigurationSettings.SelectedConfig = firstEnv.Value;
-                }
-            }
-
-            foreach (var app in allApps)
-            {
-                VisualElement appElement = appVisualTree.Instantiate();
-                appElement.Q<Label>().text = app.Item1;
-
-                GroupBox togglesContainer = appElement.Q<GroupBox>();
-
-                foreach (var envConfig in app.Item2)
-                {
-                    VisualElement envElement = envVisualTree.Instantiate();
-
-                    Toggle toggle = envElement.Q<Toggle>();
-                    toggles.Add(toggle);
-                    toggle.dataSource = (app.Item1, envConfig.Key);
-                    toggle.text = envConfig.Key;
-                    toggle.RegisterCallback<ChangeEvent<bool>>(evt =>
-                    {
-                        if (evt.newValue)
-                        {
-                            appConfigurationSettings.SelectedConfig = envConfig.Value;
-                            selectedAppConfigSection.dataSource = appConfigurationSettings.SelectedConfig;
-
-                            appConfigurationSettings.SelectedEnv = envConfig.Key;
-                            appConfigurationSettings.SelectedApp = app.Item1;
-
-                            RefreshButtonsVisibility();
-                            UpdateMismatchWarning();
-                        }
-                    });
-
-                    DataBinding toggleBinding = new()
-                    {
-                        dataSourcePath = new(),
-                        bindingMode = BindingMode.ToTarget
-                    };
-                    toggleBinding.sourceToUiConverters.AddConverter(
-                        (ref (string, string) value) => value.Item1 == appConfigurationSettings.SelectedApp && value.Item2 == appConfigurationSettings.SelectedEnv);
-                    toggle.SetBinding(nameof(toggle.value), toggleBinding);
-
-                    togglesContainer.Add(envElement);
-                }
-                scrollView.Add(appElement);
-            }
+            RefreshAvailableApps();
 
             // Selected config data bindings
             selectedAppConfigSection.dataSource = appConfigurationSettings.SelectedConfig;
@@ -201,8 +145,9 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                 GetWindow<AppConfigurationWindow>().ShowAppConfigurationWindow(appConfigurationSettings.SelectedConfig, appConfigurationSettings);
             };
 
-            // Subscribe to login state changes
+            // Subscribe to login state changes and asset changes
             EditorLoginState.OnLoginStateChanged += OnLoginStateChanged;
+            ObjectChangeEvents.changesPublished += OnObjectChanged;
 
             // Initial UI state
             RefreshButtonsVisibility();
@@ -213,6 +158,13 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
         private void OnDestroy()
         {
             EditorLoginState.OnLoginStateChanged -= OnLoginStateChanged;
+            ObjectChangeEvents.changesPublished -= OnObjectChanged;
+        }
+
+        private void OnFocus()
+        {
+            if (appConfigurationSettings != null && scrollView != null)
+                RefreshAvailableApps();
         }
 
         private void OnLoginStateChanged()
@@ -221,6 +173,103 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             UpdateLoginUI();
             UpdateMismatchWarning();
         }
+
+        private void OnObjectChanged(ref ObjectChangeEventStream stream)
+        {
+            if (appConfigurationSettings == null || scrollView == null) return;
+
+            int settingsId = appConfigurationSettings.GetInstanceID();
+            for (int i = 0; i < stream.length; i++)
+            {
+                if (stream.GetEventType(i) == ObjectChangeKind.ChangeAssetObjectProperties)
+                {
+                    stream.GetChangeAssetObjectPropertiesEvent(i, out var data);
+                    if (data.instanceId == settingsId)
+                    {
+                        RefreshAvailableApps();
+                        break;
+                    }
+                }
+            }
+        }
+
+        #region Available apps
+
+        private void RefreshAvailableApps()
+        {
+            scrollView.Clear();
+            toggles.Clear();
+
+            var allApps = appConfigurationSettings.GetAppIdentification(appConfigurationSettings.AppAssets);
+
+            bool hasValidSelection = appConfigurationSettings.SelectedConfig != null
+                && !string.IsNullOrEmpty(appConfigurationSettings.SelectedConfig.ApiBaseUrl)
+                && !string.IsNullOrEmpty(appConfigurationSettings.SelectedApp);
+
+            if (!hasValidSelection && allApps.Count > 0)
+            {
+                var firstApp = allApps[0];
+                if (firstApp.Item2.Count > 0)
+                {
+                    var firstEnv = firstApp.Item2.First();
+                    appConfigurationSettings.SelectedApp = firstApp.Item1;
+                    appConfigurationSettings.SelectedEnv = firstEnv.Key;
+                    appConfigurationSettings.SelectedConfig = firstEnv.Value;
+                }
+            }
+
+            foreach (var app in allApps)
+            {
+                VisualElement appElement = appVisualTree.Instantiate();
+                appElement.Q<Label>().text = app.Item1;
+
+                GroupBox togglesContainer = appElement.Q<GroupBox>();
+
+                foreach (var envConfig in app.Item2)
+                {
+                    VisualElement envElement = envVisualTree.Instantiate();
+
+                    Toggle toggle = envElement.Q<Toggle>();
+                    toggles.Add(toggle);
+                    toggle.dataSource = (app.Item1, envConfig.Key);
+                    toggle.text = envConfig.Key;
+                    toggle.RegisterCallback<ChangeEvent<bool>>(evt =>
+                    {
+                        if (evt.newValue)
+                        {
+                            appConfigurationSettings.SelectedConfig = envConfig.Value;
+                            selectedAppConfigSection.dataSource = appConfigurationSettings.SelectedConfig;
+
+                            appConfigurationSettings.SelectedEnv = envConfig.Key;
+                            appConfigurationSettings.SelectedApp = app.Item1;
+
+                            RefreshButtonsVisibility();
+                            UpdateMismatchWarning();
+                        }
+                    });
+
+                    DataBinding toggleBinding = new()
+                    {
+                        dataSourcePath = new(),
+                        bindingMode = BindingMode.ToTarget
+                    };
+                    toggleBinding.sourceToUiConverters.AddConverter(
+                        (ref (string, string) value) => value.Item1 == appConfigurationSettings.SelectedApp && value.Item2 == appConfigurationSettings.SelectedEnv);
+                    toggle.SetBinding(nameof(toggle.value), toggleBinding);
+
+                    togglesContainer.Add(envElement);
+                }
+                scrollView.Add(appElement);
+            }
+
+            if (selectedAppConfigSection != null)
+                selectedAppConfigSection.dataSource = appConfigurationSettings.SelectedConfig;
+
+            RefreshButtonsVisibility();
+            UpdateMismatchWarning();
+        }
+
+        #endregion
 
         #region Button visibility
 
