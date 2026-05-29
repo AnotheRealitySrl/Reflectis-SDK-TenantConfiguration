@@ -61,36 +61,58 @@ namespace Reflectis.SDK.TenantConfiguration
 
             if (getTenantDataOnInit)
             {
-                ApiResponse<Tenant> tenantDataReq = await GetTenantData(apiConfig);
-                if (tenantDataReq.IsSuccess)
-                {
-                    TenantConfiguration = tenantDataReq.Content;
-                }
-                else
-                {
-                    Debug.LogError($"[{name}]: Failed to get tenant data: {tenantDataReq.ReasonPhrase}");
-                }
+                // Fire the 3 HMAC fetches in parallel: they are independent server-side
+                // (3 distinct endpoints, no ordering requirement) and serialising them
+                // widens the race window with consumers that call
+                // GetEffectiveSupportedLanguages too eagerly (e.g. AppManager cascade
+                // at boot). With WhenAll, the boot finishes when the slowest of the
+                // three returns instead of summing three latencies.
+                Task<ApiResponse<Tenant>> tenantDataTask = GetTenantData(apiConfig);
+                Task<ApiResponse<JObject>> appCustomConfigTask = GetAppCustomConfig(apiConfig);
+                Task<ApiResponse<TenantPublicConfig>> tenantPublicTask = GetTenantPublicConfig(apiConfig);
 
-                ApiResponse<JObject> appCustomConfigReq = await GetAppCustomConfig(apiConfig);
-                if (appCustomConfigReq.IsSuccess)
-                {
-                    AppConfig = appCustomConfigReq.Content;
-                }
-                else
-                {
-                    Debug.LogError($"[{name}]: Failed to get app data: {appCustomConfigReq.ReasonPhrase}");
-                }
+                await Task.WhenAll(tenantDataTask, appCustomConfigTask, tenantPublicTask);
 
-                ApiResponse<TenantPublicConfig> tenantPublicReq = await GetTenantPublicConfig(apiConfig);
-                if (tenantPublicReq.IsSuccess)
-                {
-                    PublicConfig = tenantPublicReq.Content;
-                }
+                if (tenantDataTask.Result.IsSuccess)
+                    TenantConfiguration = tenantDataTask.Result.Content;
                 else
-                {
-                    Debug.LogError($"[{name}]: Failed to get tenant public config: {tenantPublicReq.ReasonPhrase}");
-                }
+                    Debug.LogError($"[{name}]: Failed to get tenant data: {tenantDataTask.Result.ReasonPhrase}");
+
+                if (appCustomConfigTask.Result.IsSuccess)
+                    AppConfig = appCustomConfigTask.Result.Content;
+                else
+                    Debug.LogError($"[{name}]: Failed to get app data: {appCustomConfigTask.Result.ReasonPhrase}");
+
+                if (tenantPublicTask.Result.IsSuccess)
+                    PublicConfig = tenantPublicTask.Result.Content;
+                else
+                    Debug.LogError($"[{name}]: Failed to get tenant public config: {tenantPublicTask.Result.ReasonPhrase}");
             }
+        }
+
+        /// <summary>
+        /// Awaits until <see cref="PublicConfig"/> is populated (or the timeout fires).
+        /// Use in consumers that call <see cref="GetEffectiveSupportedLanguages"/> from
+        /// code paths that may run before <see cref="Init"/> finishes — typically
+        /// `AppManager.GetUserPreferences` at boot and any UI init that races with the
+        /// auth pipeline. Pair with the parallelised fetches above: the parallelism
+        /// shrinks the window, this wait covers the residual epsilon and any future
+        /// flow that bypasses the boot sequence (e.g. runtime tenant switch).
+        /// </summary>
+        /// <param name="timeoutMs">
+        /// Defaults to 10s. If <see cref="PublicConfig"/> stays null past the timeout
+        /// (server unreachable, persistent 5xx, …), the method returns false and the
+        /// caller proceeds with the documented fail-secure behaviour
+        /// (effective list = <c>["en"]</c>, switcher hidden).
+        /// </param>
+        /// <returns>true if PublicConfig became available within the timeout.</returns>
+        public async Task<bool> WaitForPublicConfigAsync(int timeoutMs = 10000)
+        {
+            if (publicConfig != null) return true;
+            float deadline = Time.realtimeSinceStartup + (timeoutMs / 1000f);
+            while (publicConfig == null && Time.realtimeSinceStartup < deadline)
+                await Task.Yield();
+            return publicConfig != null;
         }
 
         /// <summary>
