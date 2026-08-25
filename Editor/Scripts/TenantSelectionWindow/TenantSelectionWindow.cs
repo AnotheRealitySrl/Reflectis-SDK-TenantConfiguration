@@ -1,5 +1,3 @@
-using Newtonsoft.Json;
-
 using Reflectis.SDK.Core.ApiSystem;
 using Reflectis.SDK.Core.Utilities;
 using Reflectis.SDK.Http;
@@ -8,8 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Headers;
 
 using Unity.Properties;
 
@@ -313,8 +309,18 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                 string username = EditorLoginState.Username;
                 string userPart = !string.IsNullOrEmpty(username) ? $" - {username}" : string.Empty;
                 string rolePart = EditorLoginState.IsTenantManager ? " [TenantManager]" : "";
-                loginStatusLabel.text = $"Logged in: {tenantLabel}{userPart}{rolePart}";
-                loginStatusLabel.style.color = new Color(0.2f, 0.8f, 0.2f);
+
+                // An expired token is not an error state: the next operation renews it. Say so,
+                // instead of showing a green "logged in" that hides a round trip to Azure.
+                bool tokenValid = EditorLoginState.IsTokenValid;
+                string sessionPart = tokenValid
+                    ? $" (session until {EditorSessionManager.DescribeExpiry()})"
+                    : " - session expired, will be renewed on the next operation";
+
+                loginStatusLabel.text = $"Logged in: {tenantLabel}{userPart}{rolePart}{sessionPart}";
+                loginStatusLabel.style.color = tokenValid
+                    ? new Color(0.2f, 0.8f, 0.2f)
+                    : new Color(0.9f, 0.7f, 0.2f);
             }
             else
             {
@@ -345,11 +351,9 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
             }
         }
 
-        private void OnLogoutClicked()
+        private async void OnLogoutClicked()
         {
-            AzureAuthService.Reset();
-            EditorLoginState.Clear();
-            Debug.Log("[TenantSelectionWindow] Logged out.");
+            await EditorSessionManager.LogoutAsync();
         }
 
         private async void OnLoginClicked()
@@ -427,74 +431,15 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                 // 4. clientId = AppIdentification.Credential.AppId
                 string clientId = selectedConfig.Credential.AppId.ToString();
 
-                // 5. Initialize Azure auth
+                // 5. Azure login, token exchange, role check and session storage — including the
+                //    auth config, which the session manager needs to renew the token later on.
                 loginStatusLabel.text = "Logging in...";
-                AzureAuthService.Reset();
-                if (b2cConfig.IsEntraId)
-                {
-                    AzureAuthService.InitEntraId(clientId, b2cConfig.Tenant, b2cConfig.RedirectUri);
-                }
-                else
-                {
-                    AzureAuthService.Init(clientId, b2cConfig.Tenant, b2cConfig.Policy, b2cConfig.RedirectUri);
-                }
 
-                // 6. Build scopes
-                string[] scopes = new[]
+                if (!await EditorSessionManager.LoginAsync(tenant, b2cConfig, clientId, selectedApp, selectedEnv))
                 {
-                    "openid",
-                    "offline_access",
-                    $"https://{b2cConfig.Tenant}.onmicrosoft.com/{b2cConfig.ProfileApiId}/access"
-                };
-
-                // 7. Interactive login
-                (string accessToken, string username) = await AzureAuthService.LoginInteractive(scopes);
-
-                // 8. Get tokens from profile API
-                loginStatusLabel.text = "Getting tokens...";
-                string tokensJson = await AzureAuthService.GetUserDataAsync(tenant.Config.ProfileApiUrl, accessToken);
-                if (string.IsNullOrEmpty(tokensJson))
-                {
-                    Debug.LogError("[TenantSelectionWindow] Failed to get user tokens.");
-                    loginStatusLabel.text = "Login failed (tokens)";
+                    loginStatusLabel.text = "Login failed (see Console)";
                     return;
                 }
-
-                JwtToken[] tokens = JsonConvert.DeserializeObject<JwtToken[]>(tokensJson);
-
-                // 9. Find token matching tenant label
-                string apiLabel = tenant.Label;
-                JwtToken matchingToken = tokens.FirstOrDefault(t => t.ApiLabel == apiLabel);
-                if (matchingToken == null)
-                {
-                    Debug.LogError($"[TenantSelectionWindow] No token found for API label: {apiLabel}");
-                    loginStatusLabel.text = $"Login failed (no token for {apiLabel})";
-                    return;
-                }
-
-                // 10. Check if user is TenantManager
-                bool isTenantManager = false;
-                try
-                {
-                    string applicationApiUrl = tenant.Config.ApplicationApiUrl;
-                    if (!string.IsNullOrEmpty(applicationApiUrl))
-                    {
-                        using var httpClient = new HttpClient();
-                        using var permRequest = new HttpRequestMessage(HttpMethod.Get, $"{applicationApiUrl}/tenants/app/Unity/permissions/my?api-version=2");
-                        permRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", matchingToken.Bearer);
-                        var permResponse = await httpClient.SendAsync(permRequest);
-                        isTenantManager = permResponse.IsSuccessStatusCode;
-                    }
-                }
-                catch (Exception permEx)
-                {
-                    Debug.LogWarning($"[TenantSelectionWindow] Could not check TenantManager role: {permEx.Message}");
-                }
-
-                // 11. Store login state
-                EditorLoginState.Set(matchingToken.Bearer, tenant, username, isTenantManager, selectedApp, selectedEnv);
-
-                Debug.Log($"[TenantSelectionWindow] Login successful for tenant: {tenant.Label}, user: {username}, isTenantManager: {isTenantManager}");
             }
             catch (Exception ex)
             {
