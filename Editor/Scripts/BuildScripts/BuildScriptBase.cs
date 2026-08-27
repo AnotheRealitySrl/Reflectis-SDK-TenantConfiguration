@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Reflectis.SDK.TenantConfiguration.Editor
 {
-    [CreateAssetMenu(fileName = "BuildScriptBase", menuName = "Reflectis/SDK-TenantConfiguration/BuildScriptBase")]
+    [CreateAssetMenu(fileName = "BuildScriptBase", menuName = "Virtuademy/SDK-TenantConfiguration/BuildScriptBase")]
     public class BuildScriptBase : ScriptableObject
     {
         [SerializeField] protected TenantConfigurationSystem tenantConfigurationSystem;

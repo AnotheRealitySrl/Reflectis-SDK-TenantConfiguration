@@ -41,7 +41,7 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
         private const string settings_folder_path = "Assets/Editor/TenantConfiguration";
         private const string settings_configuration_path = "TenantConfiguration.asset";
 
-        [MenuItem("Reflectis/Show available tenants")]
+        [MenuItem("Virtuademy/Show available tenants")]
         public static void ShowExample()
         {
             TenantSelectionWindow wnd = GetWindow<TenantSelectionWindow>();

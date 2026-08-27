@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Reflectis.SDK.TenantConfiguration.Editor
 {
-    [CreateAssetMenu(fileName = "AppConfigurationSettings", menuName = "Reflectis/SDK-TenantConfiguration/AppConfigurationSettings")]
+    [CreateAssetMenu(fileName = "AppConfigurationSettings", menuName = "Virtuademy/SDK-TenantConfiguration/AppConfigurationSettings")]
     public class AppConfigurationSettings : ScriptableObject
     {
         [SerializeField] private bool isSelected = true;
