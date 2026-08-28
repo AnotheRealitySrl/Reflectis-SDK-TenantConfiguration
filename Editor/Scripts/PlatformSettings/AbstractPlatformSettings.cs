@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Reflectis.SDK.TenantConfiguration.Editor
+namespace Virtuademy.SDK.TenantConfiguration.Editor
 {
     public abstract class AbstractPlatformSettings : ScriptableObject
     {

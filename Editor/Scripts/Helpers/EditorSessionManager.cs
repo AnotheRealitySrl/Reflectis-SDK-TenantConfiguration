@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-using Reflectis.SDK.Core.Utilities;
+using Virtuademy.SDK.Core.Utilities;
 
 using System;
 using System.Linq;
@@ -13,7 +13,7 @@ using UnityEditor;
 
 using UnityEngine;
 
-namespace Reflectis.SDK.TenantConfiguration.Editor
+namespace Virtuademy.SDK.TenantConfiguration.Editor
 {
     /// <summary>
     /// Owns the editor's authenticated session: acquires it, renews it before it expires, and

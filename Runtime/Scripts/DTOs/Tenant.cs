@@ -2,7 +2,7 @@ using System;
 
 using UnityEngine;
 
-namespace Reflectis.SDK.TenantConfiguration
+namespace Virtuademy.SDK.TenantConfiguration
 {
     public enum Env
     {

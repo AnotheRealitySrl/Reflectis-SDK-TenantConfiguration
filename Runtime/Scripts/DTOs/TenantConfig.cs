@@ -4,7 +4,7 @@ using Unity.Properties;
 
 using UnityEngine;
 
-namespace Reflectis.SDK.TenantConfiguration
+namespace Virtuademy.SDK.TenantConfiguration
 {
     [Serializable, Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.Fields)]
     public class TenantConfig

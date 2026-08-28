@@ -4,7 +4,7 @@ using System;
 
 using UnityEngine;
 
-namespace Reflectis.SDK.TenantConfiguration
+namespace Virtuademy.SDK.TenantConfiguration
 {
     /// <summary>
     /// Azure B2C authentication configuration extracted from app custom config.

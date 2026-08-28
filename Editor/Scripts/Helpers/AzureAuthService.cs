@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 using UnityEngine;
 
-namespace Reflectis.SDK.TenantConfiguration.Editor
+namespace Virtuademy.SDK.TenantConfiguration.Editor
 {
     /// <summary>
     /// Azure authentication service using MSAL.

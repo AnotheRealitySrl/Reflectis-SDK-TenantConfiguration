@@ -4,7 +4,7 @@ using UnityEditor;
 
 using UnityEngine;
 
-namespace Reflectis.SDK.TenantConfiguration.Editor
+namespace Virtuademy.SDK.TenantConfiguration.Editor
 {
     [CreateAssetMenu(fileName = "BuildScriptBase", menuName = "Virtuademy/SDK-TenantConfiguration/BuildScriptBase")]
     public class BuildScriptBase : ScriptableObject

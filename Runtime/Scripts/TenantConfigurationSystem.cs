@@ -1,8 +1,8 @@
 
 using Newtonsoft.Json.Linq;
 
-using Reflectis.SDK.Core.ApiSystem;
-using Reflectis.SDK.Http;
+using Virtuademy.SDK.Core.ApiSystem;
+using Virtuademy.SDK.Http;
 
 using System;
 using System.Collections.Generic;
@@ -11,9 +11,9 @@ using System.Threading.Tasks;
 
 using UnityEngine;
 using UnityEngine.Networking;
-using static Reflectis.SDK.Core.Authentication.IAuthenticationSystem;
+using static Virtuademy.SDK.Core.Authentication.IAuthenticationSystem;
 
-namespace Reflectis.SDK.TenantConfiguration
+namespace Virtuademy.SDK.TenantConfiguration
 {
     /// <summary>
     /// SM-compatible wrapper for TenantConfigurationApi.

@@ -1,8 +1,8 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-using Reflectis.SDK.Core.ApiSystem;
-using Reflectis.SDK.Http;
+using Virtuademy.SDK.Core.ApiSystem;
+using Virtuademy.SDK.Http;
 
 using System;
 using System.Collections.Generic;
@@ -14,7 +14,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Reflectis.SDK.TenantConfiguration.Editor
+namespace Virtuademy.SDK.TenantConfiguration.Editor
 {
     // Wrapper class to make configuration items editable via data binding
     [System.Serializable]

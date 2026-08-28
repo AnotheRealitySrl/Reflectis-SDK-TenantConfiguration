@@ -1,13 +1,13 @@
 using Newtonsoft.Json;
 
-using Reflectis.SDK.TenantConfiguration;
+using Virtuademy.SDK.TenantConfiguration;
 
 using System;
 using System.Globalization;
 
 using UnityEditor;
 
-namespace Reflectis.SDK.TenantConfiguration.Editor
+namespace Virtuademy.SDK.TenantConfiguration.Editor
 {
     /// <summary>
     /// Stores editor login state using both SessionState (for runtime) and EditorPrefs (for persistence across editor restarts).

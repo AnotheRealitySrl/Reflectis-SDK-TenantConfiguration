@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 using UnityEngine;
 
-namespace Reflectis.SDK.TenantConfiguration
+namespace Virtuademy.SDK.TenantConfiguration
 {
     /// <summary>
     /// Whitelisted public projection of <c>tenant.ctn_config</c> returned by

@@ -1,6 +1,6 @@
 {
-    "name": "Reflectis.SDK.TenantConfiguration",
-    "rootNamespace": "Reflectis.SDK.TenantConfiguration",
+    "name": "Virtuademy.SDK.TenantConfiguration",
+    "rootNamespace": "Virtuademy.SDK.TenantConfiguration",
     "references": [
         "GUID:ab59f74e483e1ee4595bfefea56493f2"
     ],

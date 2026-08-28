@@ -1,1 +1,1 @@
-# Reflectis-SDK-TenantConfiguration
+# Virtuademy-SDK-TenantConfiguration

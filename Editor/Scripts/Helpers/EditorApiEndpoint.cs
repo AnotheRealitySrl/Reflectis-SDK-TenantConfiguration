@@ -1,4 +1,4 @@
-namespace Reflectis.SDK.TenantConfiguration.Editor
+namespace Virtuademy.SDK.TenantConfiguration.Editor
 {
     /// <summary>
     /// The Application API the editor tooling talks to: addressables deploy, interpreted-script

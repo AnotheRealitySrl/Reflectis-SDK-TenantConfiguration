@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Text;
 
-namespace Reflectis.SDK.TenantConfiguration.Editor
+namespace Virtuademy.SDK.TenantConfiguration.Editor
 {
     /// <summary>
     /// Reads registered claims out of a Bearer JWT without validating its signature.

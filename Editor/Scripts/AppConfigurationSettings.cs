@@ -1,6 +1,6 @@
 using Newtonsoft.Json.Linq;
 
-using Reflectis.SDK.Core.ApiSystem;
+using Virtuademy.SDK.Core.ApiSystem;
 
 using System.Collections.Generic;
 
@@ -10,7 +10,7 @@ using UnityEditor;
 
 using UnityEngine;
 
-namespace Reflectis.SDK.TenantConfiguration.Editor
+namespace Virtuademy.SDK.TenantConfiguration.Editor
 {
     [CreateAssetMenu(fileName = "AppConfigurationSettings", menuName = "Virtuademy/SDK-TenantConfiguration/AppConfigurationSettings")]
     public class AppConfigurationSettings : ScriptableObject
