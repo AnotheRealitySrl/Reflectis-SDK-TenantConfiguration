@@ -1,4 +1,4 @@
-
+﻿
 using Newtonsoft.Json.Linq;
 
 using Virtuademy.SDK.Core.ApiSystem;
@@ -21,7 +21,7 @@ namespace Virtuademy.SDK.TenantConfiguration
     /// New code should use TenantConfigurationApi directly.
     /// </summary>
     [CreateAssetMenu(menuName = "AnotheReality/Systems/TenantConfigurationSystem", fileName = "TenantConfigurationSystem")]
-    public class TenantConfigurationSystem : ApiSystemBase
+    public class TenantConfigurationSystem : ApiSystemBase, IApiEndpointResolver
     {
         #region Inspector info
         [Header("Tenant Configuration API Info")]
@@ -33,6 +33,7 @@ namespace Virtuademy.SDK.TenantConfiguration
         private Tenant tenantConfiguration;
         private JObject appConfig;
         private TenantPublicConfig publicConfig;
+        private List<ApiEndpoint> apiEndpoints = new();
         #endregion
 
         #region Properties
@@ -53,6 +54,33 @@ namespace Virtuademy.SDK.TenantConfiguration
         public AppIdentification AppIdentification => apiConfig;
         #endregion
 
+        #region IApiEndpointResolver
+
+        /// <summary>
+        /// Base URL the platform reports for <paramref name="apiType"/>, matched on the
+        /// canonical type rather than the tenant-scoped label. Returns false when
+        /// discovery has not answered or does not cover that type, which leaves the
+        /// caller on the base URL serialized into its own configuration.
+        /// </summary>
+        public bool TryGetBaseUrl(string apiType, out string baseUrl)
+        {
+            baseUrl = null;
+
+            if (string.IsNullOrEmpty(apiType) || apiEndpoints == null)
+            {
+                return false;
+            }
+
+            ApiEndpoint match = apiEndpoints.FirstOrDefault(
+                e => string.Equals(e.Type, apiType, StringComparison.OrdinalIgnoreCase));
+
+            baseUrl = match?.BaseUrls?.FirstOrDefault();
+
+            return !string.IsNullOrEmpty(baseUrl);
+        }
+
+        #endregion
+
         #region System implementation
 
         public override async Task Init()
@@ -67,11 +95,17 @@ namespace Virtuademy.SDK.TenantConfiguration
                 // GetEffectiveSupportedLanguages too eagerly (e.g. AppManager cascade
                 // at boot). With WhenAll, the boot finishes when the slowest of the
                 // three returns instead of summing three latencies.
-                Task<ApiResponse<Tenant>> tenantDataTask = GetTenantData(apiConfig);
-                Task<ApiResponse<JObject>> appCustomConfigTask = GetAppCustomConfig(apiConfig);
-                Task<ApiResponse<TenantPublicConfig>> tenantPublicTask = GetTenantPublicConfig(apiConfig);
+                //
+                // serverTimeOffset is passed explicitly: these are static calls, so
+                // they bypass ApiSystemBase.BuildRequest and would otherwise sign with
+                // the raw device clock. base.Init() has just measured the offset off
+                // GET /apiserver/info (getApiInfo), so it is available here.
+                Task<ApiResponse<Tenant>> tenantDataTask = GetTenantData(apiConfig, serverTimeOffset);
+                Task<ApiResponse<JObject>> appCustomConfigTask = GetAppCustomConfig(apiConfig, serverTimeOffset);
+                Task<ApiResponse<TenantPublicConfig>> tenantPublicTask = GetTenantPublicConfig(apiConfig, serverTimeOffset);
+                Task<ApiResponse<List<ApiEndpoint>>> apiEndpointsTask = GetApiEndpoints(apiConfig, serverTimeOffset);
 
-                await Task.WhenAll(tenantDataTask, appCustomConfigTask, tenantPublicTask);
+                await Task.WhenAll(tenantDataTask, appCustomConfigTask, tenantPublicTask, apiEndpointsTask);
 
                 if (tenantDataTask.Result.IsSuccess)
                     TenantConfiguration = tenantDataTask.Result.Content;
@@ -87,6 +121,22 @@ namespace Virtuademy.SDK.TenantConfiguration
                     PublicConfig = tenantPublicTask.Result.Content;
                 else
                     Debug.LogError($"[{name}]: Failed to get tenant public config: {tenantPublicTask.Result.ReasonPhrase}");
+
+                // Endpoint discovery (ADR 0024). Registering makes this system the resolver
+                // the other API systems consult for their base URL. A failure here is not
+                // fatal on purpose: no registration means every system keeps the base URL
+                // serialized into its own configuration, which is the behaviour that
+                // predates discovery.
+                if (apiEndpointsTask.Result.IsSuccess)
+                {
+                    apiEndpoints = apiEndpointsTask.Result.Content ?? new List<ApiEndpoint>();
+                    ApiEndpointResolver.Current = this;
+                }
+                else
+                {
+                    Debug.LogWarning($"[{name}]: Failed to get API endpoints: {apiEndpointsTask.Result.ReasonPhrase}. " +
+                                     "API systems will use the base URLs serialized in the build.");
+                }
             }
         }
 
@@ -157,38 +207,58 @@ namespace Virtuademy.SDK.TenantConfiguration
 
         public async Task<ApiResponse<object>> GetTenantAvailability()
         {
-            return await GetTenantAvailability(apiConfig);
+            return await GetTenantAvailability(apiConfig, serverTimeOffset);
         }
 
         #endregion
 
         #region Static API access (for editor/standalone use without SM)
 
-        public static async Task<ApiResponse<object>> GetTenantAvailability(AppIdentification apiConfig)
+        // Every method here is HMAC-signed, and the signature carries a timestamp the
+        // server checks against its own UtcNow: HmacAuthenticationHandler
+        // (SPACS-Identity) answers 401 as soon as the two are more than
+        // HmacReplayAttackDelaySeconds apart — 15s by default, and no API of ours
+        // overrides it. Being static, these calls do not go through
+        // ApiSystemBase.BuildRequest and therefore do not pick up the measured
+        // serverTimeOffset on their own, so callers that have one must pass it:
+        // otherwise a device whose clock is off by more than 15s (kiosks and
+        // interactive whiteboards with no NTP are the usual case) fails the whole
+        // tenant-configuration bootstrap, AppConfig stays null and AppManager blocks
+        // access with MetaverseOffline.
+        //
+        // The parameter is optional so the editor tooling (TenantSelectionWindow,
+        // AppConfigurationWindow, AppConfiguratorScriptBase) keeps compiling
+        // unchanged: it runs on a developer machine, where the local clock is the
+        // right thing to sign with.
+
+        public static async Task<ApiResponse<object>> GetTenantAvailability(AppIdentification apiConfig, TimeSpan? serverTimeOffset = null)
         {
             using UnityWebRequest request = ApiHelper.BuildRequest(
                 UnityWebRequest.kHttpVerbGET, "manage/apps/tenant/available", apiConfig,
-                authentication: EAuthentication.Hmac);
+                authentication: EAuthentication.Hmac,
+                serverTimeOffset: serverTimeOffset);
             await request.SendWebRequest();
 
             return new ApiResponse<object>(request.responseCode, request.error, request.downloadHandler.text);
         }
 
-        public static async Task<ApiResponse<Tenant>> GetTenantData(AppIdentification apiConfig)
+        public static async Task<ApiResponse<Tenant>> GetTenantData(AppIdentification apiConfig, TimeSpan? serverTimeOffset = null)
         {
             using UnityWebRequest request = ApiHelper.BuildRequest(
                 UnityWebRequest.kHttpVerbGET, "manage/apps/tenant", apiConfig,
-                authentication: EAuthentication.Hmac);
+                authentication: EAuthentication.Hmac,
+                serverTimeOffset: serverTimeOffset);
             await request.SendWebRequest();
 
             return new ApiResponse<Tenant>(request.responseCode, request.error, request.downloadHandler.text);
         }
 
-        public static async Task<ApiResponse<JObject>> GetAppCustomConfig(AppIdentification apiConfig)
+        public static async Task<ApiResponse<JObject>> GetAppCustomConfig(AppIdentification apiConfig, TimeSpan? serverTimeOffset = null)
         {
             using UnityWebRequest request = ApiHelper.BuildRequest(
                 UnityWebRequest.kHttpVerbGET, "manage/apps/config/custom", apiConfig,
-                authentication: EAuthentication.Hmac);
+                authentication: EAuthentication.Hmac,
+                serverTimeOffset: serverTimeOffset);
             await request.SendWebRequest();
 
             return new ApiResponse<JObject>(request.responseCode, request.error, request.downloadHandler.text);
@@ -199,22 +269,39 @@ namespace Virtuademy.SDK.TenantConfiguration
         /// HMAC endpoint readable by every registered app — see
         /// <c>docs/localization.md</c> in the meta-repo for the contract.
         /// </summary>
-        public static async Task<ApiResponse<TenantPublicConfig>> GetTenantPublicConfig(AppIdentification apiConfig)
+        public static async Task<ApiResponse<TenantPublicConfig>> GetTenantPublicConfig(AppIdentification apiConfig, TimeSpan? serverTimeOffset = null)
         {
             using UnityWebRequest request = ApiHelper.BuildRequest(
                 UnityWebRequest.kHttpVerbGET, "manage/apps/tenant/config-public", apiConfig,
-                authentication: EAuthentication.Hmac);
+                authentication: EAuthentication.Hmac,
+                serverTimeOffset: serverTimeOffset);
             await request.SendWebRequest();
 
             return new ApiResponse<TenantPublicConfig>(request.responseCode, request.error, request.downloadHandler.text);
         }
 
-        public static async Task<ApiResponse> UpdateAppCustomConfig(AppIdentification apiConfig, string config)
+        /// <summary>
+        /// Every API this app holds an Enabled grant to, with the base URLs that reach
+        /// it. Pre-login HMAC endpoint — see ADR 0024 in the meta-repo.
+        /// </summary>
+        public static async Task<ApiResponse<List<ApiEndpoint>>> GetApiEndpoints(AppIdentification apiConfig, TimeSpan? serverTimeOffset = null)
+        {
+            using UnityWebRequest request = ApiHelper.BuildRequest(
+                UnityWebRequest.kHttpVerbGET, "manage/apps/api-endpoints", apiConfig,
+                authentication: EAuthentication.Hmac,
+                serverTimeOffset: serverTimeOffset);
+            await request.SendWebRequest();
+
+            return new ApiResponse<List<ApiEndpoint>>(request.responseCode, request.error, request.downloadHandler.text);
+        }
+
+        public static async Task<ApiResponse> UpdateAppCustomConfig(AppIdentification apiConfig, string config, TimeSpan? serverTimeOffset = null)
         {
             using UnityWebRequest request = ApiHelper.BuildRequest(
                 UnityWebRequest.kHttpVerbPUT, "manage/apps/config/custom", apiConfig,
                 body: config,
-                authentication: EAuthentication.Hmac);
+                authentication: EAuthentication.Hmac,
+                serverTimeOffset: serverTimeOffset);
             await request.SendWebRequest();
 
             return new ApiResponse(request.responseCode, request.error, request.downloadHandler.text);

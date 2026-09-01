@@ -1,5 +1,14 @@
 # Release notes
 
+## v2.0.1
+
+### Fixed
+- The static API methods now accept a `serverTimeOffset` and `Init` passes the one
+  measured by `ApiSystemBase`. They bypass `ApiSystemBase.BuildRequest`, so they used
+  to sign the HMAC timestamp with the raw device clock: on a device more than 15s off
+  (the server's replay window) the whole tenant-configuration bootstrap returned 401,
+  `AppConfig` stayed null and the application blocked access with `MetaverseOffline`.
+
 ## v2.0.0
 
 ### Added
