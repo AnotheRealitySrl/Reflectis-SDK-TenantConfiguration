@@ -45,6 +45,11 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
         private const string settings_folder_path = "Assets/Editor/TenantConfiguration";
         private const string settings_configuration_path = "TenantConfiguration.asset";
 
+        // Suffix appended to the tenant label to form the Application API token label
+        // (e.g. tenant "Simbi" -> "SimbiApplication"). Same convention as
+        // ReflectisBrowserCommunicationSystem.ManageTokens — see OnLoginClicked for the match rule.
+        private const string application_api_label_suffix = "Application";
+
         [MenuItem("Reflectis/Show available tenants")]
         public static void ShowExample()
         {
@@ -460,14 +465,25 @@ namespace Reflectis.SDK.TenantConfiguration.Editor
                     return;
                 }
 
-                JwtToken[] tokens = JsonConvert.DeserializeObject<JwtToken[]>(tokensJson);
+                JwtToken[] tokens = JsonConvert.DeserializeObject<JwtToken[]>(tokensJson) ?? Array.Empty<JwtToken>();
 
-                // 9. Find token matching tenant label
-                string apiLabel = tenant.Label;
-                JwtToken matchingToken = tokens.FirstOrDefault(t => t.ApiLabel == apiLabel);
+                // 9. Find the Application API token.
+                //    New tenants suffix the Application API label with "Application" (tenant "Simbi"
+                //    -> API label "SimbiApplication"), matching the "<TenantLabel><Suffix>" scheme
+                //    already used by AI/Realtime ("SimbiAI"/"SimbiRealtime"). Match the suffixed label
+                //    first, then fall back to the bare tenant label for tenants provisioned before the
+                //    convention (e.g. Marangoni).
+                //    TODO: remove the legacy bare-label fallback once every tenant uses the suffix.
+                string apiLabel = tenant.Label + application_api_label_suffix;
+                JwtToken matchingToken = tokens.FirstOrDefault(t => t.ApiLabel == apiLabel)
+                                         ?? tokens.FirstOrDefault(t => t.ApiLabel == tenant.Label);
                 if (matchingToken == null)
                 {
-                    Debug.LogError($"[TenantSelectionWindow] No token found for API label: {apiLabel}");
+                    // The received labels tell apart "no token minted at all" (empty: profile not
+                    // Enabled, or the app's role definition doesn't request the API) from "minted
+                    // under a label we don't match".
+                    string received = tokens.Length == 0 ? "<none>" : string.Join(", ", tokens.Select(t => t.ApiLabel));
+                    Debug.LogError($"[TenantSelectionWindow] No token found for API label: {apiLabel} (or {tenant.Label}). Received: {received}");
                     loginStatusLabel.text = $"Login failed (no token for {apiLabel})";
                     return;
                 }

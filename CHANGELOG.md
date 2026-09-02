@@ -1,5 +1,11 @@
 # Release notes
 
+## v2.0.1
+
+### Fixed
+- Editor login: the Application API token is now matched by the `<TenantLabel>Application` label, falling back to the bare tenant label for tenants provisioned before that convention. Same rule the WebGL browser bridge already applies; without it the login failed with "No token found for API label: `<tenant>`" on every tenant using the current convention.
+- Editor login: the failure log lists the token labels actually received, which separates "no token was minted" from "minted under a label we don't match".
+
 ## v2.0.0
 
 ### Added
