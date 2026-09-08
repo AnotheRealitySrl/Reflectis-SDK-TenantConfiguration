@@ -37,6 +37,31 @@ namespace Virtuademy.SDK.TenantConfiguration
         #endregion
 
         #region Properties
+
+        /// <summary>
+        /// Canonical type of the Configuration API, so this system's own base URL comes from
+        /// the generated asset like every other API's (ADR 0025).
+        /// </summary>
+        /// <remarks>
+        /// Pairs with <see cref="UseRuntimeResolver"/> being false: the two sources are read
+        /// separately precisely so this system can use the one that is a file and skip the one
+        /// that is a request to itself.
+        /// <para>
+        /// Until this existed, this was the only API system whose address could come from
+        /// nowhere but the value serialized into its asset — so it was also the only one that
+        /// died outright when that field was emptied, with the missing-URL exception firing
+        /// before any of the fetches below could run.
+        /// </para>
+        /// </remarks>
+        protected override string DiscoveryApiType => "Configuration";
+
+        /// <summary>
+        /// This system does not ask the resolver, because the resolver is this system: at the
+        /// point <c>base.Init</c> needs an address, the fetch that would supply one has not
+        /// been made — and it cannot be made without the address.
+        /// </summary>
+        protected override bool UseRuntimeResolver => false;
+
         public bool GetTenantDataOnInit => getTenantDataOnInit;
 
         public Tenant TenantConfiguration { get { return tenantConfiguration; } set { tenantConfiguration = value; } }
