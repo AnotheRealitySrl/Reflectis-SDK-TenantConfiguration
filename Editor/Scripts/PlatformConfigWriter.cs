@@ -23,7 +23,12 @@ namespace Virtuademy.SDK.TenantConfiguration.Editor
     /// </summary>
     public static class PlatformConfigWriter
     {
-        private const string config_folder_path = "Assets/Virtuademy/PlatformConfig";
+        /// <summary>
+        /// A folder named <c>Resources</c> is not cosmetic: the assets are read through
+        /// <c>Resources.Load</c> so that the editor and a player build resolve them the same way,
+        /// and an asset outside one is simply absent from the build. See <c>PlatformConfig</c>.
+        /// </summary>
+        private const string config_folder_path = "Assets/Virtuademy/PlatformConfig/Resources";
 
         /// <summary>
         /// Canonical API type → the version recorded for it in the tenant's config.
@@ -102,6 +107,7 @@ namespace Virtuademy.SDK.TenantConfiguration.Editor
 
             EditorUtility.SetDirty(asset);
             AssetDatabase.SaveAssets();
+            PlatformConfig.InvalidateCache();
 
             Debug.Log($"[PlatformConfigWriter] Wrote {entries.Count} endpoint(s) from {generatedFrom}: " +
                       string.Join(", ", entries.Select(e => e.ApiType)));
@@ -131,6 +137,7 @@ namespace Virtuademy.SDK.TenantConfiguration.Editor
 
             EditorUtility.SetDirty(asset);
             AssetDatabase.SaveAssets();
+            PlatformConfig.InvalidateCache();
 
             return asset;
         }
@@ -165,6 +172,7 @@ namespace Virtuademy.SDK.TenantConfiguration.Editor
 
             if (found.Count > 0)
             {
+                WarnIfNotLoadable(found[0]);
                 return found[0];
             }
 
@@ -178,6 +186,27 @@ namespace Virtuademy.SDK.TenantConfiguration.Editor
             Debug.Log($"[PlatformConfigWriter] Created {assetPath}.");
 
             return created;
+        }
+
+        /// <summary>
+        /// An asset outside a <c>Resources</c> folder resolves in the editor and is missing from
+        /// the build, which is the least detectable shape a configuration fault can take: every
+        /// consumer falls back silently to what it already had, and the fallback is documented
+        /// behaviour. So it is reported here, where somebody is looking.
+        /// </summary>
+        private static void WarnIfNotLoadable<T>(T asset) where T : ScriptableObject
+        {
+            string path = AssetDatabase.GetAssetPath(asset);
+
+            if (path.IndexOf("/Resources/", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return;
+            }
+
+            Debug.LogWarning($"[PlatformConfigWriter] {path} is not inside a Resources folder, so " +
+                             "Resources.Load will not find it and a player build will not contain it. " +
+                             "It will still work in the editor, which is what makes this easy to miss. " +
+                             $"Move it under a folder named Resources (the default location is {config_folder_path}).");
         }
 
         private static void EnsureFolderExists(string folderPath)
