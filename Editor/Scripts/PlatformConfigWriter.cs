@@ -74,6 +74,23 @@ namespace Virtuademy.SDK.TenantConfiguration.Editor
                 .Select(e => new PlatformEndpoint(e.Type, e.BaseUrls[0], VersionFor(e.Type, tenant?.Config)))
                 .ToList();
 
+            // A type that appears twice makes the table ambiguous for every consumer, because
+            // resolution is keyed on type alone (ADR 0024) and both TryGet here and
+            // TenantConfigurationSystem.TryGetBaseUrl take the first match. Recording it silently
+            // would leave a build resolving to whichever the platform happened to list first, with
+            // nothing ever reporting the choice — so it is said out loud at generation time, which
+            // is the only moment somebody is looking.
+            foreach (IGrouping<string, PlatformEndpoint> duplicate in entries
+                         .GroupBy(e => e.ApiType, StringComparer.OrdinalIgnoreCase)
+                         .Where(g => g.Count() > 1))
+            {
+                Debug.LogWarning($"[PlatformConfigWriter] API type '{duplicate.Key}' was reported " +
+                                 $"{duplicate.Count()} times: {string.Join(", ", duplicate.Select(e => e.BaseUrl))}. " +
+                                 "Resolution keys on the type alone, so a consumer asking for it gets the first " +
+                                 "of these and no warning. Either the registrations need distinct cpi_type values " +
+                                 "or the contract needs a tiebreak.");
+            }
+
             PlatformEndpoints asset = FindOrCreate<PlatformEndpoints>(nameof(PlatformEndpoints) + ".asset");
 
             if (!asset.Write(generatedFrom, entries))
