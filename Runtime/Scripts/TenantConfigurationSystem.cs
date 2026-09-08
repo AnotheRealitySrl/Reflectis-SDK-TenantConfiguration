@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Linq;
 
 using Virtuademy.SDK.Core.ApiSystem;
+using Virtuademy.SDK.Core.Authentication;
 using Virtuademy.SDK.Http;
 
 using System;
@@ -11,7 +12,6 @@ using System.Threading.Tasks;
 
 using UnityEngine;
 using UnityEngine.Networking;
-using static Virtuademy.SDK.Core.Authentication.IAuthenticationSystem;
 
 namespace Virtuademy.SDK.TenantConfiguration
 {
