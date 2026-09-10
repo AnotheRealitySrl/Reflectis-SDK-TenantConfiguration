@@ -374,7 +374,7 @@ namespace Virtuademy.SDK.TenantConfiguration.Editor
                 loginStatusLabel.text = "Fetching tenant data...";
 
                 // 1. Get tenant data
-                ApiResponse<Tenant> tenantResp = await TenantConfigurationSystem.GetTenantData(selectedConfig);
+                ApiResponse<Tenant> tenantResp = await TenantConfigurationClient.GetTenantData(selectedConfig);
                 if (!tenantResp.IsSuccess)
                 {
                     Debug.LogError($"[TenantSelectionWindow] Failed to get tenant data: {tenantResp.ReasonPhrase}");
@@ -389,7 +389,7 @@ namespace Virtuademy.SDK.TenantConfiguration.Editor
                 AzureB2CConfig b2cConfig = tenant.Config.AuthConfig;
                 if (b2cConfig == null)
                 {
-                    ApiResponse<Newtonsoft.Json.Linq.JObject> customConfigResp = await TenantConfigurationSystem.GetAppCustomConfig(selectedConfig);
+                    ApiResponse<Newtonsoft.Json.Linq.JObject> customConfigResp = await TenantConfigurationClient.GetAppCustomConfig(selectedConfig);
                     if (customConfigResp.IsSuccess)
                     {
                         b2cConfig = AzureB2CConfig.FromAppCustomConfig(customConfigResp.Content);

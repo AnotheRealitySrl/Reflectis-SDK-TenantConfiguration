@@ -16,16 +16,90 @@ using UnityEngine.Networking;
 namespace Virtuademy.SDK.TenantConfiguration
 {
     /// <summary>
-    /// SM-compatible wrapper for TenantConfigurationApi.
-    /// Kept for backward compatibility with the SM.GetSystem pattern.
-    /// New code should use TenantConfigurationApi directly.
+    /// The client for the Configuration API: the tenant, its app config, the public
+    /// projection, and the endpoint table every other API client resolves its address from.
     /// </summary>
-    [CreateAssetMenu(menuName = "AnotheReality/Systems/TenantConfigurationSystem", fileName = "TenantConfigurationSystem")]
-    public class TenantConfigurationSystem : ApiSystemBase, IApiEndpointResolver
+    /// <remarks>
+    /// <para>
+    /// A plain client on <see cref="ApiClientBase"/>, not a framework system. That was the last
+    /// thing tying this package to <c>Virtuademy-SDK-Core</c> — one base class in one file,
+    /// with the rest of the package (all seven editor scripts included) naming nothing from
+    /// there at all. The framework half now lives in the application, as a thin system that
+    /// owns one of these and forwards to it.
+    /// </para>
+    /// <para>
+    /// <b>It carries no serialized configuration any more, and does not need to.</b> Its
+    /// address comes from the <c>Configuration</c> entry of the generated
+    /// <c>PlatformEndpoints</c> asset, which is committed, and its credential from the
+    /// generated <c>PlatformCredentials</c> asset, which the tenant switch writes — the two
+    /// sources <see cref="ApiClientBase.Init()"/> already prefers over anything an asset of its
+    /// own would hold.
+    /// </para>
+    /// </remarks>
+    public class TenantConfigurationClient : ApiClientBase, IApiEndpointResolver
     {
-        #region Inspector info
-        [Header("Tenant Configuration API Info")]
-        [SerializeField] private bool getTenantDataOnInit = true;
+        #region Reaching this client
+
+        private static TenantConfigurationClient installed;
+
+        /// <summary>Whether an application has installed a client.</summary>
+        public static bool IsInstalled => installed != null;
+
+        /// <summary>
+        /// The client the application installed. Editor tooling that has no application around
+        /// it constructs its own instead — every method it needs is static and takes the
+        /// configuration explicitly.
+        /// </summary>
+        public static TenantConfigurationClient Current
+            => installed
+               ?? throw new InvalidOperationException(
+                   $"No {nameof(TenantConfigurationClient)} installed. The application installs "
+                   + "one while initialising its tenant-configuration system.");
+
+        public static void Install(TenantConfigurationClient client)
+            => installed = client ?? throw new ArgumentNullException(nameof(client));
+
+        #endregion
+
+        #region Construction
+
+        public TenantConfigurationClient()
+        {
+        }
+
+        /// <summary>
+        /// Builds a client from values a host holds — typically serialized in the asset of the
+        /// framework system that owns it.
+        /// </summary>
+        /// <remarks>
+        /// The configuration is a <b>seed</b>, not the answer: <see cref="ApiClientBase.Init()"/>
+        /// prefers the generated credential asset over the credential given here, and the
+        /// <c>Configuration</c> entry of the generated endpoint asset over this base URL. What
+        /// arrives here matters only for a project that has never run a tenant switch, and for a
+        /// deliberate loopback override.
+        /// </remarks>
+        public TenantConfigurationClient(AppIdentification config,
+                                         bool getTenantDataOnInit = true,
+                                         bool checkIsAlive = true,
+                                         bool getApiInfo = true,
+                                         bool allowUntrustedServers = false)
+        {
+            ApiConfig = config ?? new AppIdentification();
+            GetTenantDataOnInit = getTenantDataOnInit;
+
+            this.checkIsAlive = checkIsAlive;
+            this.getApiInfo = getApiInfo;
+            this.allowUntrustedServers = allowUntrustedServers;
+        }
+
+        #endregion
+
+        #region Settings
+        /// <summary>
+        /// Whether <see cref="Init"/> also performs the four bootstrap fetches. The owner sets
+        /// it; it was an inspector flag when this was a <c>ScriptableObject</c>.
+        /// </summary>
+        public bool GetTenantDataOnInit { get; set; } = true;
         #endregion
 
         #region Private stuff
@@ -61,8 +135,6 @@ namespace Virtuademy.SDK.TenantConfiguration
         /// been made — and it cannot be made without the address.
         /// </summary>
         protected override bool UseRuntimeResolver => false;
-
-        public bool GetTenantDataOnInit => getTenantDataOnInit;
 
         public Tenant TenantConfiguration { get { return tenantConfiguration; } set { tenantConfiguration = value; } }
 
@@ -112,7 +184,7 @@ namespace Virtuademy.SDK.TenantConfiguration
         {
             await base.Init();
 
-            if (getTenantDataOnInit)
+            if (GetTenantDataOnInit)
             {
                 // Fire the 3 HMAC fetches in parallel: they are independent server-side
                 // (3 distinct endpoints, no ordering requirement) and serialising them
@@ -122,7 +194,7 @@ namespace Virtuademy.SDK.TenantConfiguration
                 // three returns instead of summing three latencies.
                 //
                 // serverTimeOffset is passed explicitly: these are static calls, so
-                // they bypass ApiSystemBase.BuildRequest and would otherwise sign with
+                // they bypass ApiClientBase.BuildRequest and would otherwise sign with
                 // the raw device clock. base.Init() has just measured the offset off
                 // GET /apiserver/info (getApiInfo), so it is available here.
                 Task<ApiResponse<Tenant>> tenantDataTask = GetTenantData(apiConfig, serverTimeOffset);
@@ -135,17 +207,17 @@ namespace Virtuademy.SDK.TenantConfiguration
                 if (tenantDataTask.Result.IsSuccess)
                     TenantConfiguration = tenantDataTask.Result.Content;
                 else
-                    Debug.LogError($"[{name}]: Failed to get tenant data: {tenantDataTask.Result.ReasonPhrase}");
+                    Debug.LogError($"[{Label}]: Failed to get tenant data: {tenantDataTask.Result.ReasonPhrase}");
 
                 if (appCustomConfigTask.Result.IsSuccess)
                     AppConfig = appCustomConfigTask.Result.Content;
                 else
-                    Debug.LogError($"[{name}]: Failed to get app data: {appCustomConfigTask.Result.ReasonPhrase}");
+                    Debug.LogError($"[{Label}]: Failed to get app data: {appCustomConfigTask.Result.ReasonPhrase}");
 
                 if (tenantPublicTask.Result.IsSuccess)
                     PublicConfig = tenantPublicTask.Result.Content;
                 else
-                    Debug.LogError($"[{name}]: Failed to get tenant public config: {tenantPublicTask.Result.ReasonPhrase}");
+                    Debug.LogError($"[{Label}]: Failed to get tenant public config: {tenantPublicTask.Result.ReasonPhrase}");
 
                 // Endpoint discovery (ADR 0024). Registering makes this system the resolver
                 // the other API systems consult for their base URL. A failure here is not
@@ -159,7 +231,7 @@ namespace Virtuademy.SDK.TenantConfiguration
                 }
                 else
                 {
-                    Debug.LogWarning($"[{name}]: Failed to get API endpoints: {apiEndpointsTask.Result.ReasonPhrase}. " +
+                    Debug.LogWarning($"[{Label}]: Failed to get API endpoints: {apiEndpointsTask.Result.ReasonPhrase}. " +
                                      "API systems will use the base URLs serialized in the build.");
                 }
             }
@@ -237,14 +309,14 @@ namespace Virtuademy.SDK.TenantConfiguration
 
         #endregion
 
-        #region Static API access (for editor/standalone use without SM)
+        #region Static API access (for editor and standalone use, with no client instance)
 
         // Every method here is HMAC-signed, and the signature carries a timestamp the
         // server checks against its own UtcNow: HmacAuthenticationHandler
         // (SPACS-Identity) answers 401 as soon as the two are more than
         // HmacReplayAttackDelaySeconds apart — 15s by default, and no API of ours
         // overrides it. Being static, these calls do not go through
-        // ApiSystemBase.BuildRequest and therefore do not pick up the measured
+        // ApiClientBase.BuildRequest and therefore do not pick up the measured
         // serverTimeOffset on their own, so callers that have one must pass it:
         // otherwise a device whose clock is off by more than 15s (kiosks and
         // interactive whiteboards with no NTP are the usual case) fails the whole

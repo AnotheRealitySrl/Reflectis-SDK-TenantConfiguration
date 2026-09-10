@@ -81,7 +81,7 @@ namespace Virtuademy.SDK.TenantConfiguration.Editor
 
             // A type that appears twice makes the table ambiguous for every consumer, because
             // resolution is keyed on type alone (ADR 0024) and both TryGet here and
-            // TenantConfigurationSystem.TryGetBaseUrl take the first match. Recording it silently
+            // TenantConfigurationClient.TryGetBaseUrl take the first match. Recording it silently
             // would leave a build resolving to whichever the platform happened to list first, with
             // nothing ever reporting the choice — so it is said out loud at generation time, which
             // is the only moment somebody is looking.
